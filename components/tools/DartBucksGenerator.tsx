@@ -11,6 +11,11 @@ import { PreviewPanel } from "./dart-bucks/components/PreviewPanel";
 import { PrintAuthModal } from "./dart-bucks/components/PrintAuthModal";
 import { BatchAuditLedger } from "./dart-bucks/components/BatchAuditLedger";
 
+// Safe upper bound on bills-per-batch. Above this, embedding hundreds of
+// high-res bill images into a single PDF can overflow the browser's max
+// string length inside jsPDF's internal assembly step and crash the export.
+const MAX_BILLS_PER_BATCH = 200;
+
 export default function DartBucksGenerator() {
   const [config, setConfig] = useState<DartBuckConfig>({
     mode: "drawer",
@@ -304,6 +309,19 @@ export default function DartBucksGenerator() {
         return;
       }
 
+      // Large custom batches (huge itemized quantities) generate a PDF with too many
+      // embedded high-res images. That overflows the browser's max string length
+      // inside jsPDF's internal PDF assembly (Array.join) and crashes the export.
+      // Cap the batch size here so customized runs fail gracefully with guidance
+      // instead of throwing an uncaught "Invalid string length" error.
+      if (billQueue.length > MAX_BILLS_PER_BATCH) {
+        alert(
+          `Cannot export PDF: This customized batch has ${billQueue.length} bills, which exceeds the ${MAX_BILLS_PER_BATCH}-bill safe export limit. Please lower your custom denomination quantities (or split into multiple smaller print runs) and try again.`
+        );
+        setIsGenerating(false);
+        return;
+      }
+
       const totalBills = billQueue.length;
       const totalVal = config.mode === "drawer"
         ? config.drawerAmount
@@ -321,6 +339,7 @@ export default function DartBucksGenerator() {
         orientation: "portrait",
         unit: "mm",
         format: [paperSpec.widthMm, paperSpec.heightMm],
+        compress: true,
       });
 
       const cols = gridSpec.cols;
@@ -342,16 +361,16 @@ export default function DartBucksGenerator() {
       if (config.mode === "drawer") {
         const auditCanvas = document.createElement("canvas");
         drawDrawerAuditSlip(auditCanvas, config.drawerAmount, config.drawerBreakdown, config.batchId, config.stationPrefix);
-        const auditImg = auditCanvas.toDataURL("image/png");
-        doc.addImage(auditImg, "PNG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
+        const auditImg = auditCanvas.toDataURL("image/jpeg", 0.92);
+        doc.addImage(auditImg, "JPEG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
 
         // PAGE 2: AUDIT SLIP VERSO BACK PAGE (Guarantees duplex page alignment pairing)
         if (config.includeDuplexBacks) {
           doc.addPage();
           const auditBackCanvas = document.createElement("canvas");
           drawDrawerAuditSlipBack(auditBackCanvas, config.batchId);
-          const auditBackImg = auditBackCanvas.toDataURL("image/png");
-          doc.addImage(auditBackImg, "PNG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
+          const auditBackImg = auditBackCanvas.toDataURL("image/jpeg", 0.92);
+          doc.addImage(auditBackImg, "JPEG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
         }
       }
 
@@ -376,7 +395,7 @@ export default function DartBucksGenerator() {
 
           const item = billQueue[queueIndex];
           renderDartBuckOnCanvasDirect(frontCanvas, item.serial, config, item.denom, 1200, 600);
-          const imgData = frontCanvas.toDataURL("image/png");
+          const imgData = frontCanvas.toDataURL("image/jpeg", 0.92);
 
           const col = i % cols;
           const row = Math.floor(i / cols);
@@ -384,7 +403,7 @@ export default function DartBucksGenerator() {
           const x = marginX + col * (cardWidthMm + gapX);
           const y = marginY + row * (cardHeightMm + gapY);
 
-          doc.addImage(imgData, "PNG", x, y, cardWidthMm, cardHeightMm);
+          doc.addImage(imgData, "JPEG", x, y, cardWidthMm, cardHeightMm);
 
           if (config.includeCropMarks) {
             drawPdfCropMarks(doc, x, y, cardWidthMm, cardHeightMm, config.bleedMm, 4);
@@ -400,7 +419,7 @@ export default function DartBucksGenerator() {
 
             const item = billQueue[queueIndex];
             renderDartBuckBackOnCanvas(backCanvas, item.serial, config, watermarkLightImg, watermarkDarkImg, item.denom, 1200, 600);
-            const imgDataBack = backCanvas.toDataURL("image/png");
+            const imgDataBack = backCanvas.toDataURL("image/jpeg", 0.92);
 
             const col = i % cols;
             const row = Math.floor(i / cols);
@@ -410,7 +429,7 @@ export default function DartBucksGenerator() {
             const x = marginX + mirroredCol * (cardWidthMm + gapX);
             const y = marginY + row * (cardHeightMm + gapY);
 
-            doc.addImage(imgDataBack, "PNG", x, y, cardWidthMm, cardHeightMm);
+            doc.addImage(imgDataBack, "JPEG", x, y, cardWidthMm, cardHeightMm);
 
             if (config.includeCropMarks) {
               drawPdfCropMarks(doc, x, y, cardWidthMm, cardHeightMm, config.bleedMm, 4);
@@ -419,11 +438,16 @@ export default function DartBucksGenerator() {
         }
       }
 
+      // Only cache a full base64 copy of the PDF for smaller batches. Serializing a
+      // large multi-page image-heavy PDF into a second in-memory string risks hitting
+      // the same "Invalid string length" limit this whole export path is guarding against.
       let pdfDataUrl: string | undefined = undefined;
-      try {
-        pdfDataUrl = doc.output("datauristring");
-      } catch (e) {
-        console.warn("Could not generate pdfDataUrl string:", e);
+      if (totalBills <= 60) {
+        try {
+          pdfDataUrl = doc.output("datauristring");
+        } catch (e) {
+          console.warn("Could not generate pdfDataUrl string:", e);
+        }
       }
 
       const logItem: BatchLogItem = {
@@ -459,7 +483,11 @@ export default function DartBucksGenerator() {
       doc.save(filename);
     } catch (err) {
       console.error("PDF export error:", err);
-      alert("Failed to export PDF: " + (err instanceof Error ? err.message : String(err)));
+      const rawMessage = err instanceof Error ? err.message : String(err);
+      const message = /invalid string length/i.test(rawMessage)
+        ? "This batch is too large to export as a single PDF (too many high-resolution bill images embedded at once). Please lower your custom bill quantities or split this into smaller print runs, then try again."
+        : rawMessage;
+      alert("Failed to export PDF: " + message);
     } finally {
       setIsGenerating(false);
     }

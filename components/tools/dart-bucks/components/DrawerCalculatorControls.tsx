@@ -11,6 +11,11 @@ interface DrawerCalculatorControlsProps {
   onRegenerateBatchId: () => void;
 }
 
+// Safe ceiling on how many bills of a single denomination a custom ratio can
+// request. Without this, a stray large number in one of these fields can
+// balloon the print batch past what a single PDF export can safely embed.
+const MAX_BILLS_PER_DENOM = 200;
+
 export const DrawerCalculatorControls: React.FC<DrawerCalculatorControlsProps> = ({
   config,
   setConfig,
@@ -25,7 +30,7 @@ export const DrawerCalculatorControls: React.FC<DrawerCalculatorControlsProps> =
   const updateDenomCount = (denom: "bill20" | "bill10" | "bill5" | "bill1", delta: number) => {
     setConfig((prev) => {
       const current = prev.drawerBreakdown[denom];
-      const nextCount = Math.max(0, current + delta);
+      const nextCount = Math.min(MAX_BILLS_PER_DENOM, Math.max(0, current + delta));
       const newBreakdown = { ...prev.drawerBreakdown, [denom]: nextCount };
       
       const newTotalAmount =
@@ -305,10 +310,11 @@ export const DrawerCalculatorControls: React.FC<DrawerCalculatorControlsProps> =
                   <input
                     type="number"
                     min="0"
+                    max={MAX_BILLS_PER_DENOM}
                     value={config.drawerBreakdown.bill20}
                     onChange={(e) =>
                       setConfig((prev) => {
-                        const newBreakdown = { ...prev.drawerBreakdown, bill20: parseInt(e.target.value) || 0 };
+                        const newBreakdown = { ...prev.drawerBreakdown, bill20: Math.min(MAX_BILLS_PER_DENOM, Math.max(0, parseInt(e.target.value) || 0)) };
                         const newTotal = newBreakdown.bill20 * 20 + newBreakdown.bill10 * 10 + newBreakdown.bill5 * 5 + newBreakdown.bill1;
                         return { ...prev, drawerWeighting: "custom", drawerAmount: newTotal, drawerBreakdown: newBreakdown };
                       })
@@ -329,10 +335,11 @@ export const DrawerCalculatorControls: React.FC<DrawerCalculatorControlsProps> =
                   <input
                     type="number"
                     min="0"
+                    max={MAX_BILLS_PER_DENOM}
                     value={config.drawerBreakdown.bill10}
                     onChange={(e) =>
                       setConfig((prev) => {
-                        const newBreakdown = { ...prev.drawerBreakdown, bill10: parseInt(e.target.value) || 0 };
+                        const newBreakdown = { ...prev.drawerBreakdown, bill10: Math.min(MAX_BILLS_PER_DENOM, Math.max(0, parseInt(e.target.value) || 0)) };
                         const newTotal = newBreakdown.bill20 * 20 + newBreakdown.bill10 * 10 + newBreakdown.bill5 * 5 + newBreakdown.bill1;
                         return { ...prev, drawerWeighting: "custom", drawerAmount: newTotal, drawerBreakdown: newBreakdown };
                       })
@@ -353,10 +360,11 @@ export const DrawerCalculatorControls: React.FC<DrawerCalculatorControlsProps> =
                   <input
                     type="number"
                     min="0"
+                    max={MAX_BILLS_PER_DENOM}
                     value={config.drawerBreakdown.bill5}
                     onChange={(e) =>
                       setConfig((prev) => {
-                        const newBreakdown = { ...prev.drawerBreakdown, bill5: parseInt(e.target.value) || 0 };
+                        const newBreakdown = { ...prev.drawerBreakdown, bill5: Math.min(MAX_BILLS_PER_DENOM, Math.max(0, parseInt(e.target.value) || 0)) };
                         const newTotal = newBreakdown.bill20 * 20 + newBreakdown.bill10 * 10 + newBreakdown.bill5 * 5 + newBreakdown.bill1;
                         return { ...prev, drawerWeighting: "custom", drawerAmount: newTotal, drawerBreakdown: newBreakdown };
                       })
@@ -377,10 +385,11 @@ export const DrawerCalculatorControls: React.FC<DrawerCalculatorControlsProps> =
                   <input
                     type="number"
                     min="0"
+                    max={MAX_BILLS_PER_DENOM}
                     value={config.drawerBreakdown.bill1}
                     onChange={(e) =>
                       setConfig((prev) => {
-                        const newBreakdown = { ...prev.drawerBreakdown, bill1: parseInt(e.target.value) || 0 };
+                        const newBreakdown = { ...prev.drawerBreakdown, bill1: Math.min(MAX_BILLS_PER_DENOM, Math.max(0, parseInt(e.target.value) || 0)) };
                         const newTotal = newBreakdown.bill20 * 20 + newBreakdown.bill10 * 10 + newBreakdown.bill5 * 5 + newBreakdown.bill1;
                         return { ...prev, drawerWeighting: "custom", drawerAmount: newTotal, drawerBreakdown: newBreakdown };
                       })
