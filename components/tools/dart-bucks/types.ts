@@ -105,7 +105,8 @@ export interface BatchLogItem {
   status: "active" | "completed" | "shredded";
   completed_at?: string;
   shredded_at?: string;
-  pdf_data_url?: string;
+  /** Storage object path inside the private "dartbucks-pdfs" bucket, e.g. "BATCH123/log_abc.pdf" */
+  pdf_url?: string | null;
 }
 
 export type BillScalePreset = "medium";

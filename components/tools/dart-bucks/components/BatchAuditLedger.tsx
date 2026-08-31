@@ -8,6 +8,7 @@ interface BatchAuditLedgerProps {
   onMarkShredded?: (logId: string) => void;
   onDeleteLog?: (logId: string) => void;
   onClearAllLogs?: () => void;
+  onDownloadPdf?: (log: BatchLogItem) => void;
 }
 
 export const BatchAuditLedger: React.FC<BatchAuditLedgerProps> = ({
@@ -16,6 +17,7 @@ export const BatchAuditLedger: React.FC<BatchAuditLedgerProps> = ({
   onMarkShredded,
   onDeleteLog,
   onClearAllLogs,
+  onDownloadPdf,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -347,16 +349,15 @@ export const BatchAuditLedger: React.FC<BatchAuditLedgerProps> = ({
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-1.5">
-                        {log.pdf_data_url && !isShredded && (
-                          <a
-                            href={log.pdf_data_url}
-                            download={`DartBucks_Batch_${log.batch_id}.pdf`}
+                        {log.pdf_url && !isShredded && onDownloadPdf && (
+                          <button
+                            onClick={() => onDownloadPdf(log)}
                             title="Re-Download Stored Prepress PDF Document"
                             className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-500/30 transition-all flex items-center gap-1 font-bold text-[11px]"
                           >
                             <Download className="w-3.5 h-3.5" />
                             PDF
-                          </a>
+                          </button>
                         )}
 
                         <button

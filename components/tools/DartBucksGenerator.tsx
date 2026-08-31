@@ -69,6 +69,9 @@ export default function DartBucksGenerator() {
     fetchBatchLogs();
   }, []);
 
+  // Batch logs live in Supabase (table `dartbuck_batch_logs`) with the generated PDFs
+  // stored in the private "dartbucks-pdfs" storage bucket. LocalStorage is kept only as a
+  // best-effort offline fallback so the ledger still shows something if Supabase is unreachable.
   const fetchBatchLogs = async () => {
     const local = localStorage.getItem("dartbuck_batch_logs");
     if (local) {
@@ -86,14 +89,15 @@ export default function DartBucksGenerator() {
           .select("*")
           .order("printed_at", { ascending: false });
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           setBatchLogs(data);
           try {
-            const cleanData = data.map((d) => ({ ...d, pdf_data_url: undefined }));
-            localStorage.setItem("dartbuck_batch_logs", JSON.stringify(cleanData));
+            localStorage.setItem("dartbuck_batch_logs", JSON.stringify(data));
           } catch (e) {
             console.warn("LocalStorage quota error on fetch");
           }
+        } else if (error) {
+          console.warn("Supabase batch logs fetch error:", error.message);
         }
       }
     } catch (e) {
@@ -101,19 +105,41 @@ export default function DartBucksGenerator() {
     }
   };
 
+  // Uploads the finished PDF to the private "dartbucks-pdfs" bucket and returns the
+  // storage object path (not the giant base64 string) to store on the log row.
+  const uploadBatchPdf = async (doc: any, batchId: string, logId: string): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const pdfBlob: Blob = doc.output("blob");
+      const path = `${batchId}/${logId}.pdf`;
+      const { error } = await supabase.storage
+        .from("dartbucks-pdfs")
+        .upload(path, pdfBlob, { contentType: "application/pdf", upsert: true });
+
+      if (error) {
+        console.warn("Supabase PDF storage upload failed:", error.message);
+        return null;
+      }
+      return path;
+    } catch (e) {
+      console.warn("Supabase PDF storage upload fallback:", e);
+      return null;
+    }
+  };
+
   const saveBatchLog = async (logItem: BatchLogItem) => {
     setBatchLogs((prev) => [logItem, ...prev]);
 
     try {
-      const cleanLogs = [logItem, ...batchLogs].map((l) => ({ ...l, pdf_data_url: undefined }));
-      localStorage.setItem("dartbuck_batch_logs", JSON.stringify(cleanLogs));
+      localStorage.setItem("dartbuck_batch_logs", JSON.stringify([logItem, ...batchLogs]));
     } catch (e) {
-      console.warn("LocalStorage quota exceeded, skipped local PDF caching");
+      console.warn("LocalStorage quota exceeded, skipped local ledger caching");
     }
 
     try {
       if (supabase) {
-        await supabase.from("dartbuck_batch_logs").insert([logItem]);
+        const { error } = await supabase.from("dartbuck_batch_logs").insert([logItem]);
+        if (error) console.warn("Supabase batch log insert error:", error.message);
       }
     } catch (e) {
       console.warn("Supabase batch log insert fallback");
@@ -135,8 +161,7 @@ export default function DartBucksGenerator() {
 
     setBatchLogs(updated);
     try {
-      const clean = updated.map((l) => ({ ...l, pdf_data_url: undefined }));
-      localStorage.setItem("dartbuck_batch_logs", JSON.stringify(clean));
+      localStorage.setItem("dartbuck_batch_logs", JSON.stringify(updated));
     } catch (e) {}
 
     try {
@@ -162,13 +187,15 @@ export default function DartBucksGenerator() {
       return;
     }
 
+    const target = batchLogs.find((log) => log.id === logId);
+
     const updated = batchLogs.map((log) => {
       if (log.id === logId) {
         return {
           ...log,
           status: "shredded" as const,
           shredded_at: new Date().toISOString(),
-          pdf_data_url: undefined,
+          pdf_url: null,
         };
       }
       return log;
@@ -176,8 +203,7 @@ export default function DartBucksGenerator() {
 
     setBatchLogs(updated);
     try {
-      const clean = updated.map((l) => ({ ...l, pdf_data_url: undefined }));
-      localStorage.setItem("dartbuck_batch_logs", JSON.stringify(clean));
+      localStorage.setItem("dartbuck_batch_logs", JSON.stringify(updated));
     } catch (e) {}
 
     try {
@@ -187,9 +213,14 @@ export default function DartBucksGenerator() {
           .update({
             status: "shredded",
             shredded_at: new Date().toISOString(),
-            pdf_data_url: null,
+            pdf_url: null,
           })
           .eq("id", logId);
+
+        // The physical bills are destroyed, so remove the stored PDF too.
+        if (target?.pdf_url) {
+          await supabase.storage.from("dartbucks-pdfs").remove([target.pdf_url]);
+        }
       }
     } catch (e) {
       console.warn("Supabase batch shred status update fallback");
@@ -201,19 +232,53 @@ export default function DartBucksGenerator() {
       return;
     }
 
+    const target = batchLogs.find((log) => log.id === logId);
     const updated = batchLogs.filter((log) => log.id !== logId);
     setBatchLogs(updated);
     try {
-      const clean = updated.map((l) => ({ ...l, pdf_data_url: undefined }));
-      localStorage.setItem("dartbuck_batch_logs", JSON.stringify(clean));
+      localStorage.setItem("dartbuck_batch_logs", JSON.stringify(updated));
     } catch (e) {}
 
     try {
       if (supabase) {
         await supabase.from("dartbuck_batch_logs").delete().eq("id", logId);
+        if (target?.pdf_url) {
+          await supabase.storage.from("dartbucks-pdfs").remove([target.pdf_url]);
+        }
       }
     } catch (e) {
       console.warn("Supabase batch log delete fallback");
+    }
+  };
+
+  // Bucket is private, so re-downloads go through a short-lived signed URL
+  // generated on demand rather than a stored public link.
+  const downloadBatchPdf = async (log: BatchLogItem) => {
+    if (!log.pdf_url) {
+      alert("No stored PDF was found for this batch (it may have been shredded or generated before storage was enabled).");
+      return;
+    }
+    if (!supabase) return;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("dartbucks-pdfs")
+        .createSignedUrl(log.pdf_url, 60);
+
+      if (error || !data?.signedUrl) {
+        alert("Could not retrieve the stored PDF: " + (error?.message || "Unknown error"));
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = data.signedUrl;
+      link.download = `DartBucks_Batch_${log.batch_id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error("Failed to download stored PDF:", e);
+      alert("Could not retrieve the stored PDF.");
     }
   };
 
@@ -222,11 +287,16 @@ export default function DartBucksGenerator() {
       return;
     }
 
+    const pdfPaths = batchLogs.map((l) => l.pdf_url).filter((p): p is string => !!p);
+
     setBatchLogs([]);
     localStorage.removeItem("dartbuck_batch_logs");
 
     try {
       if (supabase) {
+        if (pdfPaths.length > 0) {
+          await supabase.storage.from("dartbucks-pdfs").remove(pdfPaths);
+        }
         await supabase.from("dartbuck_batch_logs").delete().neq("id", "");
       }
     } catch (e) {
@@ -438,20 +508,15 @@ export default function DartBucksGenerator() {
         }
       }
 
-      // Only cache a full base64 copy of the PDF for smaller batches. Serializing a
-      // large multi-page image-heavy PDF into a second in-memory string risks hitting
-      // the same "Invalid string length" limit this whole export path is guarding against.
-      let pdfDataUrl: string | undefined = undefined;
-      if (totalBills <= 60) {
-        try {
-          pdfDataUrl = doc.output("datauristring");
-        } catch (e) {
-          console.warn("Could not generate pdfDataUrl string:", e);
-        }
-      }
+      const logId = "log_" + Math.random().toString(36).substring(2, 10);
+
+      // Upload the finished PDF straight to the private "dartbucks-pdfs" storage bucket
+      // as a Blob (not a base64 string), so even large multi-page batches save reliably
+      // without risking the "Invalid string length" limit.
+      const pdfPath = await uploadBatchPdf(doc, config.batchId, logId);
 
       const logItem: BatchLogItem = {
-        id: "log_" + Math.random().toString(36).substring(2, 10),
+        id: logId,
         batch_id: config.batchId,
         station_prefix: config.stationPrefix,
         issuer_name: authData.issuerName,
@@ -471,7 +536,7 @@ export default function DartBucksGenerator() {
         issue_reason: authData.issueReason,
         printed_at: new Date().toISOString(),
         status: "active",
-        pdf_data_url: pdfDataUrl,
+        pdf_url: pdfPath,
       };
 
       await saveBatchLog(logItem);
@@ -593,6 +658,7 @@ export default function DartBucksGenerator() {
         onMarkShredded={markBatchAsShredded}
         onDeleteLog={deleteBatchLog}
         onClearAllLogs={clearAllBatchLogs}
+        onDownloadPdf={downloadBatchPdf}
       />
     </div>
   );
