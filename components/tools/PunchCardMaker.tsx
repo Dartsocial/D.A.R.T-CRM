@@ -34,7 +34,7 @@ const PunchCardClient: React.FC = () => {
           : parsed.version < 3 && parsed.stockType === 'perforated' && parsed.topMargin === 0.5
             ? { ...parsed, topMargin: 0.25, version: 3 }
             : parsed;
-        setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated, columns: migrated.columns || 2, rows: migrated.rows || 5, showGuides: migrated.showGuides ?? true });
+        setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated, columns: migrated.columns || 2, rows: migrated.rows || 5, showGuides: migrated.showGuides ?? true, cornerOffsets: migrated.cornerOffsets || DEFAULT_PAPER_STOCK.cornerOffsets });
       } catch { window.localStorage.removeItem('dart-punch-card-paper-stock'); }
     }
   }, []);

@@ -123,6 +123,13 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
   const savePaperStock = (checked: boolean) => checked
     ? window.localStorage.setItem('dart-punch-card-paper-stock', JSON.stringify(paperStock))
     : window.localStorage.removeItem('dart-punch-card-paper-stock');
+  const updateCornerOffset = (corner: keyof PaperStockSettings['cornerOffsets'], axis: 'x' | 'y', value: number) => {
+    const nextSettings = { ...paperStock, cornerOffsets: { ...paperStock.cornerOffsets, [corner]: { ...paperStock.cornerOffsets[corner], [axis]: value } } };
+    onPaperStockChange(nextSettings);
+    if (window.localStorage.getItem('dart-punch-card-paper-stock')) {
+      window.localStorage.setItem('dart-punch-card-paper-stock', JSON.stringify(nextSettings));
+    }
+  };
 
   return (
     <div 
@@ -354,6 +361,12 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
         <label className="mt-4 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" onChange={(e) => savePaperStock(e.target.checked)} /> Save as default</label>
         <label className="mt-3 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" checked={paperStock.showGuides} onChange={(e) => updatePaperStock('showGuides', e.target.checked)} /> Show removable alignment guides</label>
         <p className="mt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Default offsets are provisional until Social confirms the physical stock measurements.</p>
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>Corner calibration (px)</summary>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {([['topLeft', '1 Top left'], ['topRight', '2 Top right'], ['bottomLeft', '3 Bottom left'], ['bottomRight', '4 Bottom right']] as const).map(([corner, label]) => <fieldset key={corner} className="rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}><legend className="px-1 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{label}</legend><div className="grid grid-cols-2 gap-2"><label className="text-xs">X<input type="number" step="1" value={paperStock.cornerOffsets[corner].x} onChange={(e) => updateCornerOffset(corner, 'x', Number(e.target.value) || 0)} className="mt-1 w-full rounded-md p-1" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label><label className="text-xs">Y<input type="number" step="1" value={paperStock.cornerOffsets[corner].y} onChange={(e) => updateCornerOffset(corner, 'y', Number(e.target.value) || 0)} className="mt-1 w-full rounded-md p-1" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label></div></fieldset>)}
+          </div>
+        </details>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="text-sm">Columns<input type="number" min="1" step="1" value={paperStock.columns} disabled={paperStock.stockType === 'standard'} onChange={(e) => updatePaperStock('columns', Number(e.target.value) || 1)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>
           <label className="text-sm">Rows<input type="number" min="1" step="1" value={paperStock.rows} disabled={paperStock.stockType === 'standard'} onChange={(e) => updatePaperStock('rows', Number(e.target.value) || 1)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>
