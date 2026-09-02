@@ -116,17 +116,17 @@ export const drawPerforatedCornerGuide = (
   if (guideIndex === null) return;
 
   const length = Math.min(36, Math.max(16, Math.round(Math.min(width, height) * 0.08)));
-  const inset = 4;
+  const inset = 12;
   const right = x + width;
   const bottom = y + height;
   const leftGuide = guideIndex === 0 || guideIndex === 2;
   const topGuide = guideIndex === 0 || guideIndex === 1;
   const guideX = leftGuide ? x : right;
   const guideY = topGuide ? y : bottom;
-  const horizontalStart = leftGuide ? Math.max(0, guideX - inset - length) : Math.min(layout.pageWidth, guideX + inset);
-  const horizontalEnd = leftGuide ? guideX - inset : Math.min(layout.pageWidth, guideX + inset + length);
-  const verticalStart = topGuide ? Math.max(0, guideY - inset - length) : Math.min(layout.pageHeight, guideY + inset);
-  const verticalEnd = topGuide ? guideY - inset : Math.min(layout.pageHeight, guideY + inset + length);
+  const horizontalStart = leftGuide ? guideX + inset : right - inset - length;
+  const horizontalEnd = leftGuide ? guideX + inset + length : right - inset;
+  const verticalStart = topGuide ? guideY + inset : bottom - inset - length;
+  const verticalEnd = topGuide ? guideY + inset + length : bottom - inset;
 
   context.strokeStyle = getPerforatedGuideColor(guideIndex);
   context.lineWidth = 5;
