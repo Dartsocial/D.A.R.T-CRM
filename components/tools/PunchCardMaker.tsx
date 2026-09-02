@@ -1,11 +1,12 @@
 // app/punchcards/PunchCardClient.tsx
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import TemplateSelector from './_components/TemplateSelector';
 import CardPreview from './_components/CardPreview';
 import PDFGenerator from './_components/PDFGenerator';
 import BatchSettings from './_components/BatchSettings';
+import { DEFAULT_PAPER_STOCK, getPaperLayout, type PaperStockSettings } from './_components/layout';
 
 interface PunchCard {
   front: string;
@@ -21,6 +22,16 @@ const PunchCardClient: React.FC = () => {
   const [generatedCards, setGeneratedCards] = useState<PunchCard[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [currentBatchId, setCurrentBatchId] = useState<string>('');
+  const [paperStock, setPaperStock] = useState<PaperStockSettings>(DEFAULT_PAPER_STOCK);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('dart-punch-card-paper-stock');
+    if (saved) {
+      try { setPaperStock({ ...DEFAULT_PAPER_STOCK, ...JSON.parse(saved) }); } catch { window.localStorage.removeItem('dart-punch-card-paper-stock'); }
+    }
+  }, []);
+
+  const layout = getPaperLayout(paperStock);
 
   const handleTemplateSelect = (templatePath: string) => {
     setSelectedTemplate(templatePath);
@@ -92,7 +103,7 @@ const PunchCardClient: React.FC = () => {
             fontFamily: 'var(--font-sans)'
           }}
         >
-          Use one of our templates or upload your own! Create professional punch cards with A4-optimized layouts for easy printing.
+          Use one of our templates or upload your own! Create professional punch cards with configurable paper-stock layouts for easy printing.
         </p>
       </div>
 
@@ -150,6 +161,9 @@ const PunchCardClient: React.FC = () => {
               onCardCountChange={setCardCount}
               batchName={batchName}
               onBatchNameChange={setBatchName}
+              paperStock={paperStock}
+              onPaperStockChange={setPaperStock}
+              layout={layout}
             />
           </div>
 
@@ -223,6 +237,7 @@ const PunchCardClient: React.FC = () => {
                 templatePath={selectedTemplate}
                 cardCount={cardCount}
                 batchId={currentBatchId}
+                layout={layout}
               />
             </div>
           )}
@@ -252,6 +267,7 @@ const PunchCardClient: React.FC = () => {
                 cards={generatedCards}
                 batchName={batchName}
                 batchId={currentBatchId}
+                layout={layout}
               />
             </div>
           )}

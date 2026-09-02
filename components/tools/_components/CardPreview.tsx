@@ -2,25 +2,19 @@
 "use client";
 
 import React, { useState } from 'react';
+import { getCardPosition, type PaperLayout } from './layout';
 
 interface CardPreviewProps {
   templatePath: string;
   cardCount: number;
   batchId?: string;
+  layout: PaperLayout;
 }
 
-const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batchId }) => {
+const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batchId, layout }) => {
   const [showBackSide, setShowBackSide] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
 
-  // Calculate layout based on card count
-  const getLayout = (count: number) => {
-    if (count <= 4) return { cols: 2, rows: 2, cardsPerSheet: 4 };
-    if (count <= 6) return { cols: 2, rows: 3, cardsPerSheet: 6 };
-    return { cols: 2, rows: 4, cardsPerSheet: 8 };
-  };
-
-  const layout = getLayout(cardCount);
   const sheetsNeeded = Math.ceil(cardCount / layout.cardsPerSheet);
   
   // Generate card numbers for preview
@@ -65,13 +59,13 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
               fontFamily: 'var(--font-sans)'
             }}
           >
-            A4 Layout Preview
+            {layout.pageSize === 'a4' ? 'A4' : 'Letter'} Layout Preview
           </h3>
           <p 
             className="text-sm"
             style={{ color: 'hsl(var(--muted-foreground))' }}
           >
-            {layout.cols}×{layout.rows} layout • {cardCount} total cards • {sheetsNeeded} sheet{sheetsNeeded > 1 ? 's' : ''}
+            {layout.columns}×{layout.rows} layout • {cardCount} total cards • {sheetsNeeded} sheet{sheetsNeeded > 1 ? 's' : ''}
           </p>
           {batchId && (
             <p 
@@ -87,8 +81,8 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
             className="text-sm mb-2"
             style={{ color: 'hsl(var(--muted-foreground))' }}
           >
-            <div>Card size: 92×54mm</div>
-            <div>Paper: A4 (210×297mm)</div>
+            <div>Card size: {layout.cardWidth}×{layout.cardHeight}in</div>
+            <div>Paper: {layout.pageSize === 'a4' ? 'A4 (210×297mm)' : 'Letter (8.5×11in)'}</div>
           </div>
           {/* Flip Controls */}
           <div className="flex space-x-2">
@@ -171,9 +165,8 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
               <div 
                 className="relative mx-auto rounded-lg shadow-sm"
                 style={{ 
-                  width: '300px', 
-                  height: '424px', // A4 ratio scaled down
-                  padding: '20px',
+                   width: '300px',
+                   height: `${300 * layout.pageHeight / layout.pageWidth}px`,
                   backgroundColor: 'hsl(var(--card))',
                   border: '2px solid hsl(var(--border))',
                   borderRadius: 'var(--radius)',
@@ -181,39 +174,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                 }}
               >
                 
-                {/* Cut line guides */}
-                <div className="absolute inset-0 pointer-events-none">
-                  {/* Vertical center line */}
-                  <div 
-                    className="absolute left-1/2 top-5 bottom-5 w-px transform -translate-x-px"
-                    style={{ 
-                      borderLeft: `1px dashed hsl(var(--border))`,
-                      opacity: 0.6
-                    }}
-                  ></div>
-                  
-                  {/* Horizontal lines */}
-                  {Array.from({ length: layout.rows - 1 }, (_, i) => (
-                    <div 
-                      key={i}
-                      className="absolute left-5 right-5"
-                      style={{ 
-                        top: `${((i + 1) / layout.rows) * 100}%`,
-                        borderTop: `1px dashed hsl(var(--border))`,
-                        opacity: 0.6
-                      }}
-                    ></div>
-                  ))}
-                </div>
-
-                {/* Cards Grid */}
-                <div 
-                  className="grid gap-2 h-full"
-                  style={{ 
-                    gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
-                    gridTemplateRows: `repeat(${layout.rows}, 1fr)`
-                  }}
-                >
+                <div className="absolute inset-0">
                   {cardNumbers.map((cardNumber, index) => {
                     const isCardFlipped = cardNumber ? flippedCards.has(cardNumber) : false;
                     const displayBackSide = showBackSide || isCardFlipped;
@@ -223,6 +184,11 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                         key={index}
                         className="relative overflow-hidden cursor-pointer transition-transform hover:scale-105"
                         style={{
+                          position: 'absolute',
+                          left: `${getCardPosition(layout, index).x / layout.pageWidth * 100}%`,
+                          top: `${getCardPosition(layout, index).y / layout.pageHeight * 100}%`,
+                          width: `${layout.effectiveCardWidth / layout.pageWidth * 100}%`,
+                          height: `${layout.effectiveCardHeight / layout.pageHeight * 100}%`,
                           border: cardNumber 
                             ? '1px solid hsl(var(--border))' 
                             : '1px dashed hsl(var(--border))',
@@ -309,6 +275,11 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                                 }}
                               >
                                 #{cardNumber.toString().padStart(3, '0')}
+                              </div>
+                            )}
+                            {!displayBackSide && (
+                              <div className="absolute bottom-1 right-1 text-xs font-bold" style={{ color: 'hsl(var(--foreground))' }}>
+                                {generateBatchNumber(cardNumber)}
                               </div>
                             )}
                             

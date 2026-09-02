@@ -1,0 +1,56 @@
+export type PageSize = 'letter' | 'a4';
+export type CardOrientation = 'portrait' | 'landscape';
+
+export interface PaperStockSettings {
+  pageSize: PageSize;
+  cardWidth: number;
+  cardHeight: number;
+  orientation: CardOrientation;
+  topMargin: number;
+  leftMargin: number;
+  horizontalGap: number;
+  verticalGap: number;
+}
+
+export interface PaperLayout extends PaperStockSettings {
+  pageWidth: number;
+  pageHeight: number;
+  effectiveCardWidth: number;
+  effectiveCardHeight: number;
+  columns: number;
+  rows: number;
+  cardsPerSheet: number;
+}
+
+export const DPI = 300;
+export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
+  pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'portrait',
+  topMargin: 0.25, leftMargin: 0.25, horizontalGap: 0.25, verticalGap: 0.25,
+};
+
+const PAGE_SIZES = {
+  letter: { width: 8.5, height: 11 },
+  a4: { width: 210 / 25.4, height: 297 / 25.4 },
+} as const;
+
+export const inchesToPixels = (inches: number) => Math.round(inches * DPI);
+
+export const getPaperLayout = (settings: PaperStockSettings): PaperLayout => {
+  const page = PAGE_SIZES[settings.pageSize];
+  const effectiveCardWidth = settings.orientation === 'landscape' ? settings.cardHeight : settings.cardWidth;
+  const effectiveCardHeight = settings.orientation === 'landscape' ? settings.cardWidth : settings.cardHeight;
+  const columns = Math.max(1, Math.floor((page.width - settings.leftMargin + settings.horizontalGap) / (effectiveCardWidth + settings.horizontalGap)));
+  const rows = Math.max(1, Math.floor((page.height - settings.topMargin + settings.verticalGap) / (effectiveCardHeight + settings.verticalGap)));
+
+  return { ...settings, pageWidth: inchesToPixels(page.width), pageHeight: inchesToPixels(page.height), effectiveCardWidth: inchesToPixels(effectiveCardWidth), effectiveCardHeight: inchesToPixels(effectiveCardHeight), columns, rows, cardsPerSheet: columns * rows };
+};
+
+export const getCardPosition = (layout: PaperLayout, index: number, isBackSide = false) => {
+  const row = Math.floor(index / layout.columns);
+  const col = index % layout.columns;
+  const gapX = inchesToPixels(layout.horizontalGap);
+  const gapY = inchesToPixels(layout.verticalGap);
+  const marginX = inchesToPixels(layout.leftMargin);
+  const x = isBackSide ? layout.pageWidth - marginX - ((col + 1) * layout.effectiveCardWidth) - (col * gapX) : marginX + (col * (layout.effectiveCardWidth + gapX));
+  return { x, y: inchesToPixels(layout.topMargin) + (row * (layout.effectiveCardHeight + gapY)), row, col };
+};

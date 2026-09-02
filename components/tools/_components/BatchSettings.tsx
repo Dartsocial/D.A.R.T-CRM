@@ -2,12 +2,16 @@
 "use client";
 
 import React, { useState } from 'react';
+import { type PaperLayout, type PaperStockSettings } from './layout';
 
 interface BatchSettingsProps {
   cardCount: number;
   onCardCountChange: (count: number) => void;
   batchName: string;
   onBatchNameChange: (name: string) => void;
+  paperStock: PaperStockSettings;
+  onPaperStockChange: (settings: PaperStockSettings) => void;
+  layout: PaperLayout;
 }
 
 interface CollapsibleSectionProps {
@@ -92,7 +96,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
   cardCount,
   onCardCountChange,
   batchName,
-  onBatchNameChange
+  onBatchNameChange, paperStock, onPaperStockChange, layout
 }) => {
   const layoutOptions = [
     { count: 4, layout: '2×2', description: 'Small batch, more spacing' },
@@ -107,6 +111,17 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
   const calculateSheets = (totalCards: number, cardsPerSheet: number) => {
     return Math.ceil(totalCards / cardsPerSheet);
   };
+
+  const updatePaperStock = (field: keyof PaperStockSettings, value: string | number) => {
+    const nextSettings = { ...paperStock, [field]: value };
+    onPaperStockChange(nextSettings);
+    if (window.localStorage.getItem('dart-punch-card-paper-stock')) {
+      window.localStorage.setItem('dart-punch-card-paper-stock', JSON.stringify(nextSettings));
+    }
+  };
+  const savePaperStock = (checked: boolean) => checked
+    ? window.localStorage.setItem('dart-punch-card-paper-stock', JSON.stringify(paperStock))
+    : window.localStorage.removeItem('dart-punch-card-paper-stock');
 
   return (
     <div 
@@ -214,7 +229,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
               fontFamily: 'var(--font-sans)'
             }}
           >
-            Cards per A4 Sheet
+            Batch Size Presets
           </label>
           <div className="space-y-2">
             {layoutOptions.map(option => (
@@ -319,6 +334,21 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
       </CollapsibleSection>
 
       {/* Print Summary - Always Visible */}
+      <CollapsibleSection title="Paper Stock" defaultOpen={true} icon="📄">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm">Page size
+            <select value={paperStock.pageSize} onChange={(e) => updatePaperStock('pageSize', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}><option value="letter">Letter (8.5×11 in)</option><option value="a4">A4 (210×297 mm)</option></select>
+          </label>
+          <label className="text-sm">Card orientation
+            <select value={paperStock.orientation} onChange={(e) => updatePaperStock('orientation', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
+          </label>
+          {([['cardWidth', 'Card width (in)'], ['cardHeight', 'Card height (in)'], ['topMargin', 'Top margin (in)'], ['leftMargin', 'Left margin (in)'], ['horizontalGap', 'Horizontal gap (in)'], ['verticalGap', 'Vertical gap (in)']] as const).map(([field, label]) => <label key={field} className="text-sm">{label}<input type="number" min="0.01" step="0.01" value={paperStock[field]} onChange={(e) => updatePaperStock(field, Number(e.target.value) || 0.01)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>)}
+        </div>
+        <label className="mt-4 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" onChange={(e) => savePaperStock(e.target.checked)} /> Save as default</label>
+        <p className="mt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Default offsets are provisional until Social confirms the physical stock measurements.</p>
+        <p className="mt-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Calculated layout: {layout.columns}×{layout.rows} ({layout.cardsPerSheet} cards per sheet)</p>
+      </CollapsibleSection>
+
       <CollapsibleSection title="Print Summary" defaultOpen={true} icon="📊">
         <div 
           className="rounded-lg p-4"
@@ -355,7 +385,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
                 className="font-medium"
                 style={{ color: 'hsl(var(--foreground))' }}
               >
-                {calculateSheets(cardCount, 8)} sheets
+                {calculateSheets(cardCount, layout.cardsPerSheet)} sheets
               </span>
             </div>
             <div className="flex justify-between">
@@ -364,16 +394,16 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
                 className="font-medium"
                 style={{ color: 'hsl(var(--foreground))' }}
               >
-                8 (2×4 layout)
+                {layout.cardsPerSheet} ({layout.columns}×{layout.rows} layout)
               </span>
             </div>
-            {cardCount % 8 !== 0 && (
+            {cardCount % layout.cardsPerSheet !== 0 && (
               <div 
                 className="flex justify-between"
                 style={{ color: 'hsl(var(--destructive))' }}
               >
                 <span>Last sheet:</span>
-                <span className="font-medium">{cardCount % 8} cards</span>
+                <span className="font-medium">{cardCount % layout.cardsPerSheet} cards</span>
               </div>
             )}
           </div>
@@ -405,7 +435,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
               fontFamily: 'var(--font-sans)'
             }}
           >
-            <li>• Use A4 paper (210×297mm)</li>
+            <li>• Use {paperStock.pageSize === 'a4' ? 'A4 paper (210×297mm)' : 'US Letter paper (8.5×11in)'}</li>
             <li>• Set printer to 100% scale</li>
             <li>• Enable duplex for front/back printing</li>
             <li>• Cut along dotted lines</li>
