@@ -36,12 +36,8 @@ const PunchCardClient: React.FC = () => {
             : parsed.version < 4 && parsed.stockType === 'perforated' && parsed.leftMargin === 0.75
                 ? { ...parsed, version: 5 }
                 : parsed.version < 5 && parsed.stockType === 'perforated' && parsed.topMargin === 0.25
-                      ? { ...parsed, topMargin: 0.55, version: 5 }
-                    : parsed.version < 6 && parsed.stockType === 'perforated'
-                      ? { ...parsed, topMargin: 0.25, version: 6, cornerOffsets: { ...DEFAULT_PAPER_STOCK.cornerOffsets, ...parsed.cornerOffsets, topRight: { ...parsed.cornerOffsets?.topRight, x: (parsed.cornerOffsets?.topRight?.x ?? 0) - 1 }, bottomRight: { ...parsed.cornerOffsets?.bottomRight, x: (parsed.cornerOffsets?.bottomRight?.x ?? 0) - 1 } } }
-                    : parsed.version < 8 && parsed.stockType === 'perforated'
-                      ? { ...parsed, version: 8, cornerOffsets: { ...DEFAULT_PAPER_STOCK.cornerOffsets, ...parsed.cornerOffsets, topRight: { ...parsed.cornerOffsets?.topRight, x: -4 }, bottomRight: { ...parsed.cornerOffsets?.bottomRight, x: -4 } } }
-                    : parsed;
+                  ? { ...parsed, topMargin: 0.55, version: 5 }
+              : parsed;
         setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated, columns: migrated.columns || 2, rows: migrated.rows || 5, showGuides: migrated.showGuides ?? true, cornerOffsets: migrated.cornerOffsets || DEFAULT_PAPER_STOCK.cornerOffsets });
       } catch { window.localStorage.removeItem('dart-punch-card-paper-stock'); }
     }

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { getCardPosition, getPerforatedGuideColor, getPerforatedCornerGuideCenter, type PaperLayout } from './layout';
+import { getCardPosition, getPerforatedCornerGuideIndex, getPerforatedGuideColor, type PaperLayout } from './layout';
 
 interface CardPreviewProps {
   templatePath: string;
@@ -59,7 +59,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
               fontFamily: 'var(--font-sans)'
             }}
           >
-            {layout.pageSize === 'a4' ? 'A4' : 'Letter'} {layout.stockType === 'perforated' ? 'Pre-perforated' : 'Standard'} Layout Preview
+            {layout.pageSize === 'a4' ? 'A4' : 'Letter'} Layout Preview
           </h3>
           <p 
             className="text-sm"
@@ -173,17 +173,6 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                   boxShadow: 'var(--shadow-md)'
                 }}
               >
-                {layout.stockType === 'perforated' && layout.showGuides && [0, 1, 2, 3].map((guideIndex) => {
-                  const center = getPerforatedCornerGuideCenter(layout, guideIndex);
-                  return <div key={guideIndex} className="absolute pointer-events-none" style={{ left: `${center.x / layout.pageWidth * 100}%`, top: `${center.y / layout.pageHeight * 100}%`, transform: 'translate(-50%, -50%)', width: '18px', height: '18px' }}>
-                    <span className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: getPerforatedGuideColor(guideIndex) }} />
-                    <span className="absolute top-0 bottom-0 left-1/2 w-0.5" style={{ backgroundColor: getPerforatedGuideColor(guideIndex) }} />
-                  </div>;
-                })}
-                {layout.stockType === 'perforated' && <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute border-l border-dashed" style={{ left: `${(layout.leftMargin * 300 + layout.effectiveCardWidth) / layout.pageWidth * 100}%`, top: `${layout.topMargin * 300 / layout.pageHeight * 100}%`, height: `${layout.effectiveCardHeight * layout.rows / layout.pageHeight * 100}%`, borderColor: 'hsl(var(--muted-foreground) / 0.55)' }} />
-                  {Array.from({ length: layout.rows - 1 }, (_, row) => <div key={row} className="absolute border-t border-dashed" style={{ left: `${layout.leftMargin * 300 / layout.pageWidth * 100}%`, top: `${(layout.topMargin * 300 + (row + 1) * layout.effectiveCardHeight) / layout.pageHeight * 100}%`, width: `${layout.effectiveCardWidth * layout.columns / layout.pageWidth * 100}%`, borderColor: 'hsl(var(--muted-foreground) / 0.55)' }} />)}
-                </div>}
                 
                 <div className="absolute inset-0">
                   {cardNumbers.map((cardNumber, index) => {
@@ -193,7 +182,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                     return (
                       <div
                         key={index}
-                        className="relative overflow-visible cursor-pointer transition-transform hover:scale-105"
+                        className="relative overflow-hidden cursor-pointer transition-transform hover:scale-105"
                         style={{
                           position: 'absolute',
                           left: `${getCardPosition(layout, index).x / layout.pageWidth * 100}%`,
@@ -201,6 +190,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                           width: `${layout.effectiveCardWidth / layout.pageWidth * 100}%`,
                           height: `${layout.effectiveCardHeight / layout.pageHeight * 100}%`,
                           border: cardNumber ? '1px solid transparent' : '1px dashed hsl(var(--border))',
+                          boxShadow: cardNumber && layout.showGuides && layout.stockType === 'perforated' && getPerforatedCornerGuideIndex(layout, index) !== null ? `0 0 0 3px ${getPerforatedGuideColor(getPerforatedCornerGuideIndex(layout, index) as number)}` : 'none',
                           backgroundColor: cardNumber 
                             ? 'hsl(var(--muted) / 0.3)' 
                             : 'transparent',
