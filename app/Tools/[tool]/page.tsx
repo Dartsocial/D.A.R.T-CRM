@@ -12,6 +12,9 @@ const toolsMap: Record<string, React.ComponentType> = {
   "timesheet-calculator": dynamic(() =>
     import("@/components/tools/timesheet-calculator")
   ),
+  "punch-card-maker": dynamic(() =>
+    import("@/components/tools/PunchCardMaker")
+  ),
   "dart-bucks-generator": dynamic(() =>
     import("@/components/tools/DartBucksGenerator")
   ),
