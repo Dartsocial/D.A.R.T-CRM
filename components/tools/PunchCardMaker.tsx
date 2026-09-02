@@ -29,10 +29,10 @@ const PunchCardClient: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const migrated = parsed.orientation === 'portrait' && !parsed.version
-          ? { ...parsed, orientation: 'landscape', version: 1 }
+        const migrated = !parsed.columns || !parsed.rows
+          ? { ...parsed, orientation: 'landscape', topMargin: 0.5, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, columns: 2, rows: 5, version: 2 }
           : parsed;
-        setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated });
+        setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated, columns: migrated.columns || 2, rows: migrated.rows || 5 });
       } catch { window.localStorage.removeItem('dart-punch-card-paper-stock'); }
     }
   }, []);

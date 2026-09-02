@@ -353,7 +353,11 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" onChange={(e) => savePaperStock(e.target.checked)} /> Save as default</label>
         <p className="mt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Default offsets are provisional until Social confirms the physical stock measurements.</p>
-        <p className="mt-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Calculated layout: {layout.columns}×{layout.rows} ({layout.cardsPerSheet} cards per sheet)</p>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="text-sm">Columns<input type="number" min="1" step="1" value={paperStock.columns} disabled={paperStock.stockType === 'standard'} onChange={(e) => updatePaperStock('columns', Number(e.target.value) || 1)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>
+          <label className="text-sm">Rows<input type="number" min="1" step="1" value={paperStock.rows} disabled={paperStock.stockType === 'standard'} onChange={(e) => updatePaperStock('rows', Number(e.target.value) || 1)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>
+        </div>
+        <p className="mt-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{paperStock.stockType === 'perforated' ? 'Stock grid' : 'Calculated layout'}: {layout.columns}×{layout.rows} ({layout.cardsPerSheet} cards per sheet)</p>
       </CollapsibleSection>
 
       <CollapsibleSection title="Print Summary" defaultOpen={true} icon="📊">

@@ -14,6 +14,8 @@ export interface PaperStockSettings {
   horizontalGap: number;
   verticalGap: number;
   bleed: number;
+  columns: number;
+  rows: number;
 }
 
 export interface PaperLayout extends PaperStockSettings {
@@ -32,10 +34,11 @@ export interface PaperLayout extends PaperStockSettings {
 
 export const DPI = 300;
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
-  version: 1,
+  version: 2,
   stockType: 'perforated',
   pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'landscape',
-  topMargin: 0.25, leftMargin: 0.25, horizontalGap: 0.25, verticalGap: 0.25, bleed: 0.125,
+  topMargin: 0.5, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125,
+  columns: 2, rows: 5,
 };
 
 const PAGE_SIZES = {
@@ -45,12 +48,40 @@ const PAGE_SIZES = {
 
 export const inchesToPixels = (inches: number) => Math.round(inches * DPI);
 
+export const drawImageCover = (
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource & { width: number; height: number },
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  const sourceRatio = image.width / image.height;
+  const targetRatio = width / height;
+  let sourceX = 0;
+  let sourceY = 0;
+  let sourceWidth = image.width;
+  let sourceHeight = image.height;
+
+  if (sourceRatio > targetRatio) {
+    sourceWidth = image.height * targetRatio;
+    sourceX = (image.width - sourceWidth) / 2;
+  } else if (sourceRatio < targetRatio) {
+    sourceHeight = image.width / targetRatio;
+    sourceY = (image.height - sourceHeight) / 2;
+  }
+
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+};
+
 export const getPaperLayout = (settings: PaperStockSettings): PaperLayout => {
   const page = PAGE_SIZES[settings.pageSize];
   const effectiveCardWidth = settings.orientation === 'landscape' ? settings.cardHeight : settings.cardWidth;
   const effectiveCardHeight = settings.orientation === 'landscape' ? settings.cardWidth : settings.cardHeight;
-  const columns = Math.max(1, Math.floor((page.width - settings.leftMargin + settings.horizontalGap) / (effectiveCardWidth + settings.horizontalGap)));
-  const rows = Math.max(1, Math.floor((page.height - settings.topMargin + settings.verticalGap) / (effectiveCardHeight + settings.verticalGap)));
+  const autoColumns = Math.max(1, Math.floor((page.width - settings.leftMargin + settings.horizontalGap) / (effectiveCardWidth + settings.horizontalGap)));
+  const autoRows = Math.max(1, Math.floor((page.height - settings.topMargin + settings.verticalGap) / (effectiveCardHeight + settings.verticalGap)));
+  const columns = settings.stockType === 'perforated' ? settings.columns : autoColumns;
+  const rows = settings.stockType === 'perforated' ? settings.rows : autoRows;
 
   return { ...settings, pageWidthInches: page.width, pageHeightInches: page.height, pageWidthPoints: page.width * 72, pageHeightPoints: page.height * 72, pageWidth: inchesToPixels(page.width), pageHeight: inchesToPixels(page.height), effectiveCardWidth: inchesToPixels(effectiveCardWidth), effectiveCardHeight: inchesToPixels(effectiveCardHeight), columns, rows, cardsPerSheet: columns * rows };
 };
