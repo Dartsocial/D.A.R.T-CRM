@@ -92,6 +92,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   selectedTemplate
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [replacingTemplateId, setReplacingTemplateId] = useState<string | null>(null);
 
   const {
     templates,
@@ -100,7 +101,8 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     error,
     refreshTemplates,
     getTemplatesByCategory,
-    deleteTemplate
+    deleteTemplate,
+    replaceTemplate
   } = useTemplateStorage();
 
   const filteredTemplates = getTemplatesByCategory(selectedCategory);
@@ -113,6 +115,15 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     const success = await deleteTemplate(template.id);
     if (success && selectedTemplate === template.path) {
       onTemplateSelect(''); // Clear selection if deleted template was selected
+    }
+  };
+
+  const handleReplace = async (template: Template, file: File) => {
+    setReplacingTemplateId(template.id);
+    const success = await replaceTemplate(template, file);
+    setReplacingTemplateId(null);
+    if (success && selectedTemplate === template.path) {
+      onTemplateSelect(`${template.path.split('?')[0]}?v=${Date.now()}`);
     }
   };
 
@@ -342,6 +353,28 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                       >
                         🗑️
                       </button>
+                      <label
+                        className="p-1 rounded cursor-pointer"
+                        style={{
+                          color: 'hsl(var(--primary))',
+                          backgroundColor: 'hsl(var(--primary) / 0.1)',
+                          borderRadius: 'calc(var(--radius) - 2px)'
+                        }}
+                        title="Replace template image"
+                      >
+                        {replacingTemplateId === template.id ? 'Replacing...' : 'Replace'}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          disabled={replacingTemplateId !== null}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) void handleReplace(template, file);
+                            event.currentTarget.value = '';
+                          }}
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>

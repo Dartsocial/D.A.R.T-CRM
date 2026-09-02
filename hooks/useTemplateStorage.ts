@@ -43,6 +43,7 @@ interface UseTemplateStorageReturn {
   getTemplateById: (id: string) => Template | null;
   // Write operations
   uploadTemplate: (upload: TemplateUpload) => Promise<Template | null>;
+  replaceTemplate: (template: Template, file: File) => Promise<boolean>;
   deleteTemplate: (templateId: string) => Promise<boolean>;
   updateTemplateMetadata: (templateId: string, updates: Partial<Template>) => Promise<boolean>;
   // Batch operations
@@ -55,6 +56,43 @@ interface UseTemplateStorageReturn {
 const STORAGE_BUCKET = 'punchcards';
 const BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const METADATA_TABLE = 'template_metadata'; // Optional: store metadata in a table
+
+const normalizeTemplateImage = (file: File): Promise<Blob> => new Promise((resolve, reject) => {
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+
+  image.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1088;
+    canvas.height = 638;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Unable to prepare image canvas'));
+      return;
+    }
+
+    const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+    URL.revokeObjectURL(objectUrl);
+
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Unable to encode replacement image'));
+    }, 'image/png');
+  };
+
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error('Invalid image file'));
+  };
+  image.src = objectUrl;
+});
 
 export const useTemplateStorage = (): UseTemplateStorageReturn => {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -304,6 +342,41 @@ export const useTemplateStorage = (): UseTemplateStorageReturn => {
     }
   }, [supabase, generateFilename, getCategoryDescription, refreshTemplates]);
 
+  const replaceTemplate = useCallback(async (template: Template, file: File): Promise<boolean> => {
+    try {
+      setError(null);
+
+      if (!file.type.startsWith('image/')) {
+        throw new Error('File must be an image');
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File size must be less than 5MB');
+      }
+
+      const filename = template.path.split('/').pop()?.split('?')[0];
+      if (!filename) throw new Error('Invalid template path');
+
+      const normalizedImage = await normalizeTemplateImage(file);
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(filename, normalizedImage, {
+          cacheControl: '0',
+          contentType: 'image/png',
+          upsert: true
+        });
+
+      if (uploadError) throw new Error(`Replacement upload failed: ${uploadError.message}`);
+
+      await refreshTemplates();
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Replacement upload failed';
+      setError(errorMessage);
+      console.error('Error replacing template:', err);
+      return false;
+    }
+  }, [supabase, refreshTemplates]);
+
   // Delete a template
   const deleteTemplate = useCallback(async (templateId: string): Promise<boolean> => {
     try {
@@ -451,6 +524,7 @@ export const useTemplateStorage = (): UseTemplateStorageReturn => {
     getTemplatesByCategory,
     getTemplateById,
     uploadTemplate,
+    replaceTemplate,
     deleteTemplate,
     updateTemplateMetadata,
     uploadMultipleTemplates,
