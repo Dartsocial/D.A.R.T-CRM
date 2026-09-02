@@ -48,14 +48,14 @@ export const DPI = 300;
 export const PRINT_ALIGNMENT_OFFSET_PX = -2;
 export const PERFORATED_GUIDE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
-  version: 5,
+  version: 6,
   stockType: 'perforated',
   pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'landscape',
-  topMargin: 0.55, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125, showGuides: true,
+  topMargin: 0.25, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125, showGuides: true,
   columns: 2, rows: 5,
   cornerOffsets: {
-    topLeft: { x: 0, y: 0 }, topRight: { x: 0, y: 0 },
-    bottomLeft: { x: 0, y: 0 }, bottomRight: { x: 0, y: 0 },
+    topLeft: { x: 0, y: 0 }, topRight: { x: -1, y: 0 },
+    bottomLeft: { x: 0, y: 0 }, bottomRight: { x: -1, y: 0 },
   },
 };
 
