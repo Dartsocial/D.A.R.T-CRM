@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { getCardPosition, type PaperLayout } from './layout';
+import { getCardPosition, getPerforatedGuideColor, type PaperLayout } from './layout';
 
 interface CardPreviewProps {
   templatePath: string;
@@ -190,7 +190,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                           width: `${layout.effectiveCardWidth / layout.pageWidth * 100}%`,
                           height: `${layout.effectiveCardHeight / layout.pageHeight * 100}%`,
                           border: cardNumber 
-                            ? layout.showGuides ? '1px dashed hsl(var(--muted-foreground))' : '1px solid transparent'
+                            ? layout.showGuides ? `3px solid ${layout.stockType === 'perforated' ? getPerforatedGuideColor(index) : 'hsl(var(--muted-foreground))'}` : '1px solid transparent'
                             : '1px dashed hsl(var(--border))',
                           backgroundColor: cardNumber 
                             ? 'hsl(var(--muted) / 0.3)' 

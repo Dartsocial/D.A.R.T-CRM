@@ -46,6 +46,7 @@ export interface PaperLayout extends PaperStockSettings {
 
 export const DPI = 300;
 export const PRINT_ALIGNMENT_OFFSET_PX = -2;
+export const PERFORATED_GUIDE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
   version: 3,
   stockType: 'perforated',
@@ -90,6 +91,8 @@ export const drawImageCover = (
 
   context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
 };
+
+export const getPerforatedGuideColor = (index: number) => PERFORATED_GUIDE_COLORS[index % PERFORATED_GUIDE_COLORS.length];
 
 export const getPaperLayout = (settings: PaperStockSettings): PaperLayout => {
   const page = PAGE_SIZES[settings.pageSize];
