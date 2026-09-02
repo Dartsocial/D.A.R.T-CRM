@@ -1,12 +1,11 @@
 // app/punchcards/PunchCardClient.tsx
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import TemplateSelector from './_components/TemplateSelector';
 import CardPreview from './_components/CardPreview';
 import PDFGenerator from './_components/PDFGenerator';
-import BatchSettings from './_components/BatchSettings';
-import { DEFAULT_PAPER_STOCK, getPaperLayout, type PaperStockSettings } from './_components/layout';
+import { DEFAULT_PAPER_STOCK, getPaperLayout } from './_components/layout';
 
 interface PunchCard {
   front: string;
@@ -22,32 +21,8 @@ const PunchCardClient: React.FC = () => {
   const [generatedCards, setGeneratedCards] = useState<PunchCard[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [currentBatchId, setCurrentBatchId] = useState<string>('');
-  const [paperStock, setPaperStock] = useState<PaperStockSettings>(DEFAULT_PAPER_STOCK);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem('dart-punch-card-paper-stock');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const migrated = !parsed.columns || !parsed.rows
-          ? { ...parsed, orientation: 'landscape', topMargin: 0.55, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, columns: 2, rows: 5, version: 5 }
-          : parsed.version < 3 && parsed.stockType === 'perforated' && parsed.topMargin === 0.5
-            ? { ...parsed, topMargin: 0.25, version: 4 }
-            : parsed.version < 4 && parsed.stockType === 'perforated' && parsed.leftMargin === 0.75
-                ? { ...parsed, version: 5 }
-                : parsed.version < 5 && parsed.stockType === 'perforated' && parsed.topMargin === 0.25
-                      ? { ...parsed, topMargin: 0.55, version: 5 }
-                    : parsed.version < 6 && parsed.stockType === 'perforated'
-                      ? { ...parsed, topMargin: 0.25, version: 6, cornerOffsets: { ...DEFAULT_PAPER_STOCK.cornerOffsets, ...parsed.cornerOffsets, topRight: { ...parsed.cornerOffsets?.topRight, x: (parsed.cornerOffsets?.topRight?.x ?? 0) - 1 }, bottomRight: { ...parsed.cornerOffsets?.bottomRight, x: (parsed.cornerOffsets?.bottomRight?.x ?? 0) - 1 } } }
-                    : parsed.version < 8 && parsed.stockType === 'perforated'
-                      ? { ...parsed, version: 8, cornerOffsets: { ...DEFAULT_PAPER_STOCK.cornerOffsets, ...parsed.cornerOffsets, topRight: { ...parsed.cornerOffsets?.topRight, x: -4 }, bottomRight: { ...parsed.cornerOffsets?.bottomRight, x: -4 } } }
-                    : parsed;
-        setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated, columns: migrated.columns || 2, rows: migrated.rows || 5, showGuides: migrated.showGuides ?? true, cornerOffsets: migrated.cornerOffsets || DEFAULT_PAPER_STOCK.cornerOffsets });
-      } catch { window.localStorage.removeItem('dart-punch-card-paper-stock'); }
-    }
-  }, []);
-
-  const layout = getPaperLayout(paperStock);
+  const [batchName, setBatchName] = useState<string>('');
+  const layout = getPaperLayout(DEFAULT_PAPER_STOCK);
 
   const handleTemplateSelect = (templatePath: string) => {
     setSelectedTemplate(templatePath);
@@ -152,35 +127,12 @@ const PunchCardClient: React.FC = () => {
             />
           </div>
 
-          <div 
-            className="p-6"
-            style={{
-              backgroundColor: 'hsl(var(--card))',
-              color: 'hsl(var(--card-foreground))',
-              borderRadius: 'var(--radius)',
-              boxShadow: 'var(--shadow-md)',
-              border: '1px solid hsl(var(--border))',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <h2 
-              className="text-xl font-semibold mb-4"
-              style={{ 
-                color: 'hsl(var(--card-foreground))',
-                fontFamily: 'var(--font-sans)'
-              }}
-            >
-              Batch Settings
-            </h2>
-            <BatchSettings
-              cardCount={cardCount}
-              onCardCountChange={setCardCount}
-              batchName={batchName}
-              onBatchNameChange={setBatchName}
-              paperStock={paperStock}
-              onPaperStockChange={setPaperStock}
-              layout={layout}
-            />
+          <div className="p-6" style={{ backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-md)', border: '1px solid hsl(var(--border))' }}>
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'hsl(var(--card-foreground))' }}>Print Batch</h2>
+            <label className="block text-sm font-medium mb-4" htmlFor="card-count">Cards to print</label>
+            <input id="card-count" type="number" min="1" max="1000" value={cardCount} onChange={(event) => setCardCount(Math.max(1, Number(event.target.value) || 1))} className="w-full px-3 py-2 rounded-md mb-4" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} />
+            <label className="block text-sm font-medium mb-2" htmlFor="batch-name">Batch name</label>
+            <input id="batch-name" type="text" value={batchName} onChange={(event) => setBatchName(event.target.value)} className="w-full px-3 py-2 rounded-md" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} />
           </div>
 
           <button

@@ -45,21 +45,16 @@ export interface PaperLayout extends PaperStockSettings {
 }
 
 export const DPI = 300;
-export const CARD_BATCH_CALIBRATION_PX = {
-  globalX: -2,
-  rightEdgeX: -4,
-  y: 14,
-} as const;
 export const PERFORATED_GUIDE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
-  version: 8,
+  version: 1,
   stockType: 'perforated',
   pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'landscape',
   topMargin: 0.25, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125, showGuides: true,
   columns: 2, rows: 5,
   cornerOffsets: {
-    topLeft: { x: 0, y: 0 }, topRight: { x: -4, y: 0 },
-    bottomLeft: { x: 0, y: 0 }, bottomRight: { x: -4, y: 0 },
+    topLeft: { x: 0, y: 0 }, topRight: { x: 0, y: 0 },
+    bottomLeft: { x: 0, y: 0 }, bottomRight: { x: 0, y: 0 },
   },
 };
 
@@ -179,9 +174,5 @@ export const getCardPosition = (layout: PaperLayout, index: number, isBackSide =
   const marginX = inchesToPixels(layout.leftMargin);
   const baseX = isBackSide ? layout.pageWidth - marginX - ((col + 1) * layout.effectiveCardWidth) - (col * gapX) : marginX + (col * (layout.effectiveCardWidth + gapX));
   const baseY = inchesToPixels(layout.topMargin) + (row * (layout.effectiveCardHeight + gapY));
-  const horizontalRatio = layout.columns > 1 ? (isBackSide ? (layout.columns - 1 - col) : col) / (layout.columns - 1) : 0;
-  const verticalRatio = layout.rows > 1 ? row / (layout.rows - 1) : 0;
-  const x = baseX + CARD_BATCH_CALIBRATION_PX.globalX + (CARD_BATCH_CALIBRATION_PX.rightEdgeX * horizontalRatio);
-  const y = baseY + CARD_BATCH_CALIBRATION_PX.y;
-  return { x, y, row, col };
+  return { x: baseX, y: baseY, row, col };
 };

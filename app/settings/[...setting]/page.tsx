@@ -19,7 +19,6 @@ const settingsMap: Record<string, DynComp> = {
   // ← Drop a file at components/settings/[name]-settings.tsx and add it here
   Delivery: dynamic(() => import("@/components/settings/delivery-settings")) as DynComp,
 
-  "Tools/punch-card-maker": dynamic(() => import("@/components/settings/punch-card-maker-settings")) as DynComp,
   "Tools/timesheet-calculator": dynamic(() => import("@/components/settings/timesheet-calculator-settings")) as DynComp,
 };
 
@@ -31,7 +30,6 @@ const settingIcons: Record<string, JSX.Element> = {
   "CMS/schedule":                <Calendar size={20} />,
   Delivery:                      <Truck    size={20} />,
   "Tools/timesheet-calculator":  <Clock    size={20} />,
-  "Tools/punch-card-maker":      <CreditCard size={20} />,
 };
 
 interface SettingsPageProps {
@@ -120,7 +118,6 @@ function getSettingTitle(settingPath: string): string {
     "CMS/schedule":               "Schedule Settings",
     Delivery:                     "Delivery Settings",
     "Tools/timesheet-calculator": "Timesheet Calculator Settings",
-    "Tools/punch-card-maker":     "Punch Card Maker Settings",
   };
   return titles[settingPath] || "Settings";
 }
@@ -134,7 +131,6 @@ function getSettingDescription(settingPath: string): string {
     "CMS/schedule":               "Customize your cleaning schedule and team assignments",
     Delivery:                     "Configure break and lunch windows. No deliveries will be scheduled during these times.",
     "Tools/timesheet-calculator": "Customize timesheet calculation preferences and default settings",
-    "Tools/punch-card-maker":     "Configure punch card templates, layouts, and printing preferences",
   };
   return descriptions[settingPath] || "Manage your settings and preferences";
 }
