@@ -33,6 +33,7 @@ export interface PaperLayout extends PaperStockSettings {
 }
 
 export const DPI = 300;
+export const PRINT_ALIGNMENT_OFFSET_PX = -2;
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
   version: 2,
   stockType: 'perforated',
@@ -92,6 +93,7 @@ export const getCardPosition = (layout: PaperLayout, index: number, isBackSide =
   const gapX = inchesToPixels(layout.horizontalGap);
   const gapY = inchesToPixels(layout.verticalGap);
   const marginX = inchesToPixels(layout.leftMargin);
-  const x = isBackSide ? layout.pageWidth - marginX - ((col + 1) * layout.effectiveCardWidth) - (col * gapX) : marginX + (col * (layout.effectiveCardWidth + gapX));
-  return { x, y: inchesToPixels(layout.topMargin) + (row * (layout.effectiveCardHeight + gapY)), row, col };
+  const x = (isBackSide ? layout.pageWidth - marginX - ((col + 1) * layout.effectiveCardWidth) - (col * gapX) : marginX + (col * (layout.effectiveCardWidth + gapX))) + PRINT_ALIGNMENT_OFFSET_PX;
+  const y = inchesToPixels(layout.topMargin) + (row * (layout.effectiveCardHeight + gapY)) + PRINT_ALIGNMENT_OFFSET_PX;
+  return { x, y, row, col };
 };
