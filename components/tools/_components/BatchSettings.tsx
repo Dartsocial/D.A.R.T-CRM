@@ -336,13 +336,19 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
       {/* Print Summary - Always Visible */}
       <CollapsibleSection title="Paper Stock" defaultOpen={true} icon="📄">
         <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm col-span-2">Use case
+            <select value={paperStock.stockType} onChange={(e) => updatePaperStock('stockType', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}>
+              <option value="perforated">Pre-perforated stock (no bleed or cut lines)</option>
+              <option value="standard">Standard paper (bleed and cut lines)</option>
+            </select>
+          </label>
           <label className="text-sm">Page size
             <select value={paperStock.pageSize} onChange={(e) => updatePaperStock('pageSize', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}><option value="letter">Letter (8.5×11 in)</option><option value="a4">A4 (210×297 mm)</option></select>
           </label>
           <label className="text-sm">Card orientation
             <select value={paperStock.orientation} onChange={(e) => updatePaperStock('orientation', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
           </label>
-          {([['cardWidth', 'Card width (in)'], ['cardHeight', 'Card height (in)'], ['topMargin', 'Top margin (in)'], ['leftMargin', 'Left margin (in)'], ['horizontalGap', 'Horizontal gap (in)'], ['verticalGap', 'Vertical gap (in)']] as const).map(([field, label]) => <label key={field} className="text-sm">{label}<input type="number" min="0.01" step="0.01" value={paperStock[field]} onChange={(e) => updatePaperStock(field, Number(e.target.value) || 0.01)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>)}
+          {([['cardWidth', 'Card width (in)'], ['cardHeight', 'Card height (in)'], ['topMargin', 'Top margin (in)'], ['leftMargin', 'Left margin (in)'], ['horizontalGap', 'Horizontal gap (in)'], ['verticalGap', 'Vertical gap (in)'], ['bleed', 'Bleed (in)']] as const).map(([field, label]) => <label key={field} className="text-sm">{label}<input type="number" min="0" step="0.01" disabled={field === 'bleed' && paperStock.stockType === 'perforated'} value={paperStock[field]} onChange={(e) => updatePaperStock(field, Number(e.target.value) || 0)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>)}
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" onChange={(e) => savePaperStock(e.target.checked)} /> Save as default</label>
         <p className="mt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Default offsets are provisional until Social confirms the physical stock measurements.</p>
@@ -380,7 +386,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
               </span>
             </div>
             <div className="flex justify-between">
-              <span>A4 sheets needed:</span>
+              <span>{paperStock.pageSize === 'a4' ? 'A4' : 'Letter'} sheets needed:</span>
               <span 
                 className="font-medium"
                 style={{ color: 'hsl(var(--foreground))' }}
@@ -438,7 +444,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
             <li>• Use {paperStock.pageSize === 'a4' ? 'A4 paper (210×297mm)' : 'US Letter paper (8.5×11in)'}</li>
             <li>• Set printer to 100% scale</li>
             <li>• Enable duplex for front/back printing</li>
-            <li>• Cut along dotted lines</li>
+            <li>• {paperStock.stockType === 'perforated' ? 'Tear along the pre-perforated lines' : 'Cut along the printed dotted lines'}</li>
           </ul>
         </div>
       </CollapsibleSection>

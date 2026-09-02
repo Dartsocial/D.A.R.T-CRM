@@ -32,12 +32,13 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
   const [isReady, setIsReady] = useState(false);
 
   const { pageWidth, pageHeight, effectiveCardWidth: cardWidth, effectiveCardHeight: cardHeight, cardsPerSheet } = layout;
+  const bleed = layout.stockType === 'standard' ? Math.round(layout.bleed * 300) : 0;
 
   const generateIndividualCard = async (card: PunchCard, isBackSide: boolean = false): Promise<string> => {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
-      canvas.width = cardWidth;
-      canvas.height = cardHeight;
+      canvas.width = cardWidth + (bleed * 2);
+      canvas.height = cardHeight + (bleed * 2);
       const ctx = canvas.getContext('2d');
       
       if (!ctx) {
@@ -47,7 +48,8 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
 
       // White background
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, cardWidth, cardHeight);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.translate(bleed, bleed);
 
       if (isBackSide) {
         // Generate back side with dartboard logo watermark
@@ -100,7 +102,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         templateImg.crossOrigin = 'anonymous';
         
         templateImg.onload = () => {
-          ctx.drawImage(templateImg, 0, 0, cardWidth, cardHeight);
+          ctx.drawImage(templateImg, -bleed, -bleed, cardWidth + (bleed * 2), cardHeight + (bleed * 2));
           ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
           ctx.font = 'bold 24px Arial';
           ctx.textAlign = 'right';
@@ -179,29 +181,26 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
 
           const img = new Image();
           img.onload = () => {
-            ctx.drawImage(img, x, y, cardWidth, cardHeight);
+            ctx.drawImage(img, x - bleed, y - bleed, cardWidth + (bleed * 2), cardHeight + (bleed * 2));
             
-            // Draw cut lines
-            ctx.strokeStyle = '#cccccc';
-            ctx.setLineDash([5, 5]);
-            ctx.lineWidth = 2;
-            
-            // Vertical cut lines
-            if (col < layout.columns - 1) {
-              const cutX = x + cardWidth + (layout.horizontalGap * 300 / 2);
-              ctx.beginPath();
-              ctx.moveTo(cutX, y - 20);
-              ctx.lineTo(cutX, y + cardHeight + 20);
-              ctx.stroke();
-            }
-            
-            // Horizontal cut lines
-            if (row < layout.rows - 1) {
-              const cutY = y + cardHeight + (layout.verticalGap * 300 / 2);
-              ctx.beginPath();
-              ctx.moveTo(x - 20, cutY);
-              ctx.lineTo(x + cardWidth + 20, cutY);
-              ctx.stroke();
+            if (layout.stockType === 'standard') {
+              ctx.strokeStyle = '#cccccc';
+              ctx.setLineDash([5, 5]);
+              ctx.lineWidth = 2;
+              if (col < layout.columns - 1) {
+                const cutX = x + cardWidth + (layout.horizontalGap * 300 / 2);
+                ctx.beginPath();
+                ctx.moveTo(cutX, y - 20);
+                ctx.lineTo(cutX, y + cardHeight + 20);
+                ctx.stroke();
+              }
+              if (row < layout.rows - 1) {
+                const cutY = y + cardHeight + (layout.verticalGap * 300 / 2);
+                ctx.beginPath();
+                ctx.moveTo(x - 20, cutY);
+                ctx.lineTo(x + cardWidth + 20, cutY);
+                ctx.stroke();
+              }
             }
             
             loadedCards++;
@@ -423,7 +422,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
             >
               <li>• {layout.pageSize === 'a4' ? 'A4' : 'Letter'} sheets</li>
               <li>• Duplex print ready</li>
-              <li>• Cut guides included</li>
+              <li>• {layout.stockType === 'standard' ? 'Bleed and cut guides included' : 'Pre-perforated alignment; no cut guides'}</li>
               <li>• {isReady ? 'Ready to download' : 'Manual download'}</li>
             </ul>
           </div>
