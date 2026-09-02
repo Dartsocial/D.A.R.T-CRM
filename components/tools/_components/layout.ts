@@ -115,28 +115,44 @@ export const drawPerforatedCornerGuide = (
   const guideIndex = getPerforatedCornerGuideIndex(layout, index);
   if (guideIndex === null) return;
 
-  const length = Math.min(36, Math.max(16, Math.round(Math.min(width, height) * 0.08)));
-  const inset = 12;
-  const right = x + width;
-  const bottom = y + height;
-  const leftGuide = guideIndex === 0 || guideIndex === 2;
-  const topGuide = guideIndex === 0 || guideIndex === 1;
-  const guideX = leftGuide ? x : right;
-  const guideY = topGuide ? y : bottom;
-  const horizontalStart = leftGuide ? guideX + inset : right - inset - length;
-  const horizontalEnd = leftGuide ? guideX + inset + length : right - inset;
-  const verticalStart = topGuide ? guideY + inset : bottom - inset - length;
-  const verticalEnd = topGuide ? guideY + inset + length : bottom - inset;
+  const { x: scrapX, y: scrapY } = getPerforatedCornerGuideCenter(layout, guideIndex);
+  const leftMargin = inchesToPixels(layout.leftMargin);
+  const topMargin = inchesToPixels(layout.topMargin);
+  const rightMargin = layout.pageWidth - (leftMargin + layout.columns * layout.effectiveCardWidth + (layout.columns - 1) * inchesToPixels(layout.horizontalGap));
+  const bottomMargin = layout.pageHeight - (topMargin + layout.rows * layout.effectiveCardHeight + (layout.rows - 1) * inchesToPixels(layout.verticalGap));
+  const scrapWidth = guideIndex % 2 === 0 ? leftMargin : rightMargin;
+  const scrapHeight = guideIndex < 2 ? topMargin : bottomMargin;
+  const length = Math.max(12, Math.min(28, Math.round(Math.min(scrapWidth, scrapHeight) * 0.35)));
 
   context.strokeStyle = getPerforatedGuideColor(guideIndex);
   context.lineWidth = 5;
   context.setLineDash([]);
   context.beginPath();
-  context.moveTo(horizontalStart, guideY);
-  context.lineTo(horizontalEnd, guideY);
-  context.moveTo(guideX, verticalStart);
-  context.lineTo(guideX, verticalEnd);
+  context.moveTo(scrapX - length / 2, scrapY);
+  context.lineTo(scrapX + length / 2, scrapY);
+  context.moveTo(scrapX, scrapY - length / 2);
+  context.lineTo(scrapX, scrapY + length / 2);
   context.stroke();
+};
+
+export const getPerforatedCornerGuideCenter = (layout: PaperLayout, guideIndex: number) => {
+  const leftMargin = inchesToPixels(layout.leftMargin);
+  const topMargin = inchesToPixels(layout.topMargin);
+  const rightMargin = layout.pageWidth - (leftMargin + layout.columns * layout.effectiveCardWidth + (layout.columns - 1) * inchesToPixels(layout.horizontalGap));
+  const bottomMargin = layout.pageHeight - (topMargin + layout.rows * layout.effectiveCardHeight + (layout.rows - 1) * inchesToPixels(layout.verticalGap));
+  const cardBlockRight = leftMargin + layout.columns * layout.effectiveCardWidth + (layout.columns - 1) * inchesToPixels(layout.horizontalGap);
+  const cardBlockBottom = topMargin + layout.rows * layout.effectiveCardHeight + (layout.rows - 1) * inchesToPixels(layout.verticalGap);
+  return {
+    x: guideIndex % 2 === 0 ? leftMargin / 2 : cardBlockRight + rightMargin / 2,
+    y: guideIndex < 2 ? topMargin / 2 : cardBlockBottom + bottomMargin / 2,
+  };
+};
+
+export const drawPerforatedCornerGuides = (context: CanvasRenderingContext2D, layout: PaperLayout) => {
+  const cardWidth = layout.effectiveCardWidth;
+  const cardHeight = layout.effectiveCardHeight;
+  const cornerIndexes = [0, layout.columns - 1, (layout.rows - 1) * layout.columns, layout.rows * layout.columns - 1];
+  cornerIndexes.forEach((index) => drawPerforatedCornerGuide(context, layout, index, 0, 0, cardWidth, cardHeight));
 };
 
 export const getPaperLayout = (settings: PaperStockSettings): PaperLayout => {
