@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { getCardPosition, getPerforatedCornerGuideCenter, getPerforatedGuideColor, type PaperLayout } from './layout';
+import { getCardPosition, type PaperLayout } from './layout';
 
 interface CardPreviewProps {
   templatePath: string;
@@ -173,14 +173,6 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                   boxShadow: 'var(--shadow-md)'
                 }}
               >
-                {layout.stockType === 'perforated' && layout.showGuides && [0, 1, 2, 3].map((guideIndex) => {
-                  const center = getPerforatedCornerGuideCenter(layout, guideIndex);
-                  return <div key={guideIndex} className="absolute pointer-events-none" style={{ left: `${center.x / layout.pageWidth * 100}%`, top: `${center.y / layout.pageHeight * 100}%`, transform: 'translate(-50%, -50%)', width: '18px', height: '18px' }}>
-                    <span className="absolute left-0 right-0 top-1/2 h-0.5" style={{ backgroundColor: getPerforatedGuideColor(guideIndex) }} />
-                    <span className="absolute top-0 bottom-0 left-1/2 w-0.5" style={{ backgroundColor: getPerforatedGuideColor(guideIndex) }} />
-                  </div>;
-                })}
-                
                 <div className="absolute inset-0">
                   {cardNumbers.map((cardNumber, index) => {
                     const isCardFlipped = cardNumber ? flippedCards.has(cardNumber) : false;

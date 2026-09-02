@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
-import { drawImageCover, drawPerforatedCornerGuide, getCardPosition, type PaperLayout } from './layout';
+import { drawImageCover, getCardPosition, type PaperLayout } from './layout';
 
 interface PunchCard {
   front: string;
@@ -200,9 +200,6 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
                 ctx.moveTo(x - 20, cutY);
                 ctx.lineTo(x + cardWidth + 20, cutY);
                 ctx.stroke();
-              }
-              if (layout.stockType === 'perforated') {
-                drawPerforatedCornerGuide(ctx, layout, index, x, y, cardWidth, cardHeight);
               }
             }
             
