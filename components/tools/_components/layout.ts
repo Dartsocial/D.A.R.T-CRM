@@ -45,16 +45,17 @@ export interface PaperLayout extends PaperStockSettings {
 }
 
 export const DPI = 300;
+export const PRINT_ALIGNMENT_OFFSET_PX = -2;
 export const PERFORATED_GUIDE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
-  version: 1,
+  version: 8,
   stockType: 'perforated',
   pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'landscape',
   topMargin: 0.25, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125, showGuides: true,
   columns: 2, rows: 5,
   cornerOffsets: {
-    topLeft: { x: 0, y: 0 }, topRight: { x: 0, y: 0 },
-    bottomLeft: { x: 0, y: 0 }, bottomRight: { x: 0, y: 0 },
+    topLeft: { x: 0, y: 0 }, topRight: { x: -4, y: 0 },
+    bottomLeft: { x: 0, y: 0 }, bottomRight: { x: -4, y: 0 },
   },
 };
 
@@ -141,9 +142,15 @@ export const getPerforatedCornerGuideCenter = (layout: PaperLayout, guideIndex: 
   const bottomMargin = layout.pageHeight - (topMargin + layout.rows * layout.effectiveCardHeight + (layout.rows - 1) * inchesToPixels(layout.verticalGap));
   const cardBlockRight = leftMargin + layout.columns * layout.effectiveCardWidth + (layout.columns - 1) * inchesToPixels(layout.horizontalGap);
   const cardBlockBottom = topMargin + layout.rows * layout.effectiveCardHeight + (layout.rows - 1) * inchesToPixels(layout.verticalGap);
+  const cornerOffset = [
+    layout.cornerOffsets.topLeft,
+    layout.cornerOffsets.topRight,
+    layout.cornerOffsets.bottomLeft,
+    layout.cornerOffsets.bottomRight,
+  ][guideIndex];
   return {
-    x: guideIndex % 2 === 0 ? leftMargin / 2 : cardBlockRight + rightMargin / 2,
-    y: guideIndex < 2 ? topMargin / 2 : cardBlockBottom + bottomMargin / 2,
+    x: (guideIndex % 2 === 0 ? leftMargin / 2 : cardBlockRight + rightMargin / 2) + (cornerOffset?.x ?? 0),
+    y: (guideIndex < 2 ? topMargin / 2 : cardBlockBottom + bottomMargin / 2) + (cornerOffset?.y ?? 0),
   };
 };
 
@@ -174,5 +181,13 @@ export const getCardPosition = (layout: PaperLayout, index: number, isBackSide =
   const marginX = inchesToPixels(layout.leftMargin);
   const baseX = isBackSide ? layout.pageWidth - marginX - ((col + 1) * layout.effectiveCardWidth) - (col * gapX) : marginX + (col * (layout.effectiveCardWidth + gapX));
   const baseY = inchesToPixels(layout.topMargin) + (row * (layout.effectiveCardHeight + gapY));
-  return { x: baseX, y: baseY, row, col };
+  const horizontalRatio = layout.columns > 1 ? (isBackSide ? (layout.columns - 1 - col) : col) / (layout.columns - 1) : 0;
+  const verticalRatio = layout.rows > 1 ? row / (layout.rows - 1) : 0;
+  const topX = layout.cornerOffsets.topLeft.x + (layout.cornerOffsets.topRight.x - layout.cornerOffsets.topLeft.x) * horizontalRatio;
+  const bottomX = layout.cornerOffsets.bottomLeft.x + (layout.cornerOffsets.bottomRight.x - layout.cornerOffsets.bottomLeft.x) * horizontalRatio;
+  const topY = layout.cornerOffsets.topLeft.y + (layout.cornerOffsets.topRight.y - layout.cornerOffsets.topLeft.y) * horizontalRatio;
+  const bottomY = layout.cornerOffsets.bottomLeft.y + (layout.cornerOffsets.bottomRight.y - layout.cornerOffsets.bottomLeft.y) * horizontalRatio;
+  const x = baseX + topX + (bottomX - topX) * verticalRatio + PRINT_ALIGNMENT_OFFSET_PX;
+  const y = baseY + topY + (bottomY - topY) * verticalRatio + PRINT_ALIGNMENT_OFFSET_PX;
+  return { x, y, row, col };
 };
