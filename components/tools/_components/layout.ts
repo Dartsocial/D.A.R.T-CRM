@@ -48,7 +48,7 @@ export const DPI = 300;
 export const PRINT_ALIGNMENT_OFFSET_PX = -2;
 export const PERFORATED_GUIDE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
-  version: 3,
+  version: 4,
   stockType: 'perforated',
   pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'landscape',
   topMargin: 0.25, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125, showGuides: true,
@@ -123,15 +123,19 @@ export const drawPerforatedCornerGuide = (
   const topGuide = guideIndex === 0 || guideIndex === 1;
   const guideX = leftGuide ? x : right;
   const guideY = topGuide ? y : bottom;
+  const horizontalStart = leftGuide ? Math.max(0, guideX - inset - length) : Math.min(layout.pageWidth, guideX + inset);
+  const horizontalEnd = leftGuide ? guideX - inset : Math.min(layout.pageWidth, guideX + inset + length);
+  const verticalStart = topGuide ? Math.max(0, guideY - inset - length) : Math.min(layout.pageHeight, guideY + inset);
+  const verticalEnd = topGuide ? guideY - inset : Math.min(layout.pageHeight, guideY + inset + length);
 
   context.strokeStyle = getPerforatedGuideColor(guideIndex);
   context.lineWidth = 5;
   context.setLineDash([]);
   context.beginPath();
-  context.moveTo(guideX + (leftGuide ? -inset : inset), guideY);
-  context.lineTo(guideX + (leftGuide ? -inset - length : inset + length), guideY);
-  context.moveTo(guideX, guideY + (topGuide ? -inset : inset));
-  context.lineTo(guideX, guideY + (topGuide ? -inset - length : inset + length));
+  context.moveTo(horizontalStart, guideY);
+  context.lineTo(horizontalEnd, guideY);
+  context.moveTo(guideX, verticalStart);
+  context.lineTo(guideX, verticalEnd);
   context.stroke();
 };
 
