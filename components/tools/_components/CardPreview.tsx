@@ -59,7 +59,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
               fontFamily: 'var(--font-sans)'
             }}
           >
-            {layout.pageSize === 'a4' ? 'A4' : 'Letter'} Layout Preview
+            {layout.pageSize === 'a4' ? 'A4' : 'Letter'} {layout.stockType === 'perforated' ? 'Pre-perforated' : 'Standard'} Layout Preview
           </h3>
           <p 
             className="text-sm"
@@ -180,6 +180,10 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                     <span className="absolute top-0 bottom-0 left-1/2 w-0.5" style={{ backgroundColor: getPerforatedGuideColor(guideIndex) }} />
                   </div>;
                 })}
+                {layout.stockType === 'perforated' && <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute border-l border-dashed" style={{ left: `${(layout.leftMargin * 300 + layout.effectiveCardWidth) / layout.pageWidth * 100}%`, top: `${layout.topMargin * 300 / layout.pageHeight * 100}%`, height: `${layout.effectiveCardHeight * layout.rows / layout.pageHeight * 100}%`, borderColor: 'hsl(var(--muted-foreground) / 0.55)' }} />
+                  {Array.from({ length: layout.rows - 1 }, (_, row) => <div key={row} className="absolute border-t border-dashed" style={{ left: `${layout.leftMargin * 300 / layout.pageWidth * 100}%`, top: `${(layout.topMargin * 300 + (row + 1) * layout.effectiveCardHeight) / layout.pageHeight * 100}%`, width: `${layout.effectiveCardWidth * layout.columns / layout.pageWidth * 100}%`, borderColor: 'hsl(var(--muted-foreground) / 0.55)' }} />)}
+                </div>}
                 
                 <div className="absolute inset-0">
                   {cardNumbers.map((cardNumber, index) => {
