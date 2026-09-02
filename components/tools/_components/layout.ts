@@ -147,8 +147,19 @@ export const getPaperLayout = (settings: PaperStockSettings): PaperLayout => {
   const autoRows = Math.max(1, Math.floor((page.height - settings.topMargin + settings.verticalGap) / (effectiveCardHeight + settings.verticalGap)));
   const columns = settings.stockType === 'perforated' ? settings.columns : autoColumns;
   const rows = settings.stockType === 'perforated' ? settings.rows : autoRows;
+  const pageWidth = inchesToPixels(page.width);
+  const pageHeight = inchesToPixels(page.height);
+  const cardWidth = inchesToPixels(effectiveCardWidth);
+  const cardHeight = inchesToPixels(effectiveCardHeight);
+  const gapX = inchesToPixels(settings.horizontalGap);
+  const gapY = inchesToPixels(settings.verticalGap);
+  const centeredLeftMargin = (pageWidth - (columns * cardWidth + (columns - 1) * gapX)) / DPI;
+  const centeredTopMargin = (pageHeight - (rows * cardHeight + (rows - 1) * gapY)) / DPI;
+  const normalizedSettings = settings.stockType === 'standard'
+    ? { ...settings, leftMargin: centeredLeftMargin, topMargin: centeredTopMargin }
+    : settings;
 
-  return { ...settings, pageWidthInches: page.width, pageHeightInches: page.height, pageWidthPoints: page.width * 72, pageHeightPoints: page.height * 72, pageWidth: inchesToPixels(page.width), pageHeight: inchesToPixels(page.height), effectiveCardWidth: inchesToPixels(effectiveCardWidth), effectiveCardHeight: inchesToPixels(effectiveCardHeight), columns, rows, cardsPerSheet: columns * rows };
+  return { ...normalizedSettings, pageWidthInches: page.width, pageHeightInches: page.height, pageWidthPoints: page.width * 72, pageHeightPoints: page.height * 72, pageWidth, pageHeight, effectiveCardWidth: cardWidth, effectiveCardHeight: cardHeight, columns, rows, cardsPerSheet: columns * rows };
 };
 
 export const getCardPosition = (layout: PaperLayout, index: number, isBackSide = false) => {
