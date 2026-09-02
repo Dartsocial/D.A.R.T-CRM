@@ -236,8 +236,8 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
 
       const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'px',
-        format: [pageWidth, pageHeight]
+        unit: 'in',
+        format: [layout.pageWidthInches, layout.pageHeightInches]
       });
 
       const sheetsNeeded = Math.ceil(cards.length / cardsPerSheet);
@@ -263,7 +263,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         const frontSide = await generateCardSheet(sheetCards, false);
         
         if (pageAdded) pdf.addPage();
-        pdf.addImage(frontSide, 'PNG', 0, 0, pageWidth, pageHeight);
+        pdf.addImage(frontSide, 'PNG', 0, 0, layout.pageWidthInches, layout.pageHeightInches);
         pageAdded = true;
 
         setProgress({
@@ -276,7 +276,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         const backSide = await generateCardSheet(sheetCards, true);
         
         pdf.addPage();
-        pdf.addImage(backSide, 'PNG', 0, 0, pageWidth, pageHeight);
+        pdf.addImage(backSide, 'PNG', 0, 0, layout.pageWidthInches, layout.pageHeightInches);
       }
 
       setProgress({

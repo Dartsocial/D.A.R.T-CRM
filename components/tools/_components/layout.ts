@@ -17,6 +17,8 @@ export interface PaperStockSettings {
 }
 
 export interface PaperLayout extends PaperStockSettings {
+  pageWidthInches: number;
+  pageHeightInches: number;
   pageWidth: number;
   pageHeight: number;
   effectiveCardWidth: number;
@@ -48,7 +50,7 @@ export const getPaperLayout = (settings: PaperStockSettings): PaperLayout => {
   const columns = Math.max(1, Math.floor((page.width - settings.leftMargin + settings.horizontalGap) / (effectiveCardWidth + settings.horizontalGap)));
   const rows = Math.max(1, Math.floor((page.height - settings.topMargin + settings.verticalGap) / (effectiveCardHeight + settings.verticalGap)));
 
-  return { ...settings, pageWidth: inchesToPixels(page.width), pageHeight: inchesToPixels(page.height), effectiveCardWidth: inchesToPixels(effectiveCardWidth), effectiveCardHeight: inchesToPixels(effectiveCardHeight), columns, rows, cardsPerSheet: columns * rows };
+  return { ...settings, pageWidthInches: page.width, pageHeightInches: page.height, pageWidth: inchesToPixels(page.width), pageHeight: inchesToPixels(page.height), effectiveCardWidth: inchesToPixels(effectiveCardWidth), effectiveCardHeight: inchesToPixels(effectiveCardHeight), columns, rows, cardsPerSheet: columns * rows };
 };
 
 export const getCardPosition = (layout: PaperLayout, index: number, isBackSide = false) => {
