@@ -46,6 +46,7 @@ export interface PaperLayout extends PaperStockSettings {
 
 export const DPI = 300;
 export const PRINT_ALIGNMENT_OFFSET_PX = -2;
+export const PRINT_ALIGNMENT_OFFSET_Y_PX = 2;
 export const PERFORATED_GUIDE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
   version: 8,
@@ -182,6 +183,6 @@ export const getCardPosition = (layout: PaperLayout, index: number, isBackSide =
   const topY = layout.cornerOffsets.topLeft.y + (layout.cornerOffsets.topRight.y - layout.cornerOffsets.topLeft.y) * horizontalRatio;
   const bottomY = layout.cornerOffsets.bottomLeft.y + (layout.cornerOffsets.bottomRight.y - layout.cornerOffsets.bottomLeft.y) * horizontalRatio;
   const x = baseX + topX + (bottomX - topX) * verticalRatio + PRINT_ALIGNMENT_OFFSET_PX;
-  const y = baseY + topY + (bottomY - topY) * verticalRatio + PRINT_ALIGNMENT_OFFSET_PX;
+  const y = baseY + topY + (bottomY - topY) * verticalRatio + PRINT_ALIGNMENT_OFFSET_Y_PX;
   return { x, y, row, col };
 };
