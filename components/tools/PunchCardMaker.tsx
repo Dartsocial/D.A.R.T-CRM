@@ -30,11 +30,13 @@ const PunchCardClient: React.FC = () => {
       try {
         const parsed = JSON.parse(saved);
         const migrated = !parsed.columns || !parsed.rows
-          ? { ...parsed, orientation: 'landscape', topMargin: 0.25, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, columns: 2, rows: 5, version: 4 }
+          ? { ...parsed, orientation: 'landscape', topMargin: 0.55, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, columns: 2, rows: 5, version: 5 }
           : parsed.version < 3 && parsed.stockType === 'perforated' && parsed.topMargin === 0.5
             ? { ...parsed, topMargin: 0.25, version: 4 }
             : parsed.version < 4 && parsed.stockType === 'perforated' && parsed.leftMargin === 0.75
-              ? { ...parsed, version: 4 }
+                ? { ...parsed, version: 5 }
+                : parsed.version < 5 && parsed.stockType === 'perforated' && parsed.topMargin === 0.25
+                  ? { ...parsed, topMargin: 0.55, version: 5 }
               : parsed;
         setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated, columns: migrated.columns || 2, rows: migrated.rows || 5, showGuides: migrated.showGuides ?? true, cornerOffsets: migrated.cornerOffsets || DEFAULT_PAPER_STOCK.cornerOffsets });
       } catch { window.localStorage.removeItem('dart-punch-card-paper-stock'); }
