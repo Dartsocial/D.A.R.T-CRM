@@ -94,6 +94,47 @@ export const drawImageCover = (
 
 export const getPerforatedGuideColor = (index: number) => PERFORATED_GUIDE_COLORS[index % PERFORATED_GUIDE_COLORS.length];
 
+export const getPerforatedCornerGuideIndex = (layout: PaperLayout, index: number) => {
+  const lastRowStart = (layout.rows - 1) * layout.columns;
+  if (index === 0) return 0;
+  if (index === layout.columns - 1) return 1;
+  if (index === lastRowStart) return 2;
+  if (index === lastRowStart + layout.columns - 1) return 3;
+  return null;
+};
+
+export const drawPerforatedCornerGuide = (
+  context: CanvasRenderingContext2D,
+  layout: PaperLayout,
+  index: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  const guideIndex = getPerforatedCornerGuideIndex(layout, index);
+  if (guideIndex === null) return;
+
+  const length = Math.min(36, Math.max(16, Math.round(Math.min(width, height) * 0.08)));
+  const inset = 4;
+  const right = x + width;
+  const bottom = y + height;
+  const leftGuide = guideIndex === 0 || guideIndex === 2;
+  const topGuide = guideIndex === 0 || guideIndex === 1;
+  const guideX = leftGuide ? x : right;
+  const guideY = topGuide ? y : bottom;
+
+  context.strokeStyle = getPerforatedGuideColor(guideIndex);
+  context.lineWidth = 5;
+  context.setLineDash([]);
+  context.beginPath();
+  context.moveTo(guideX + (leftGuide ? -inset : inset), guideY);
+  context.lineTo(guideX + (leftGuide ? -inset - length : inset + length), guideY);
+  context.moveTo(guideX, guideY + (topGuide ? -inset : inset));
+  context.lineTo(guideX, guideY + (topGuide ? -inset - length : inset + length));
+  context.stroke();
+};
+
 export const getPaperLayout = (settings: PaperStockSettings): PaperLayout => {
   const page = PAGE_SIZES[settings.pageSize];
   const effectiveCardWidth = settings.orientation === 'landscape' ? settings.cardHeight : settings.cardWidth;

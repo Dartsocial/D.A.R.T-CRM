@@ -361,7 +361,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
         <label className="mt-4 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" onChange={(e) => savePaperStock(e.target.checked)} /> Save as default</label>
         <label className="mt-3 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" checked={paperStock.showGuides} onChange={(e) => updatePaperStock('showGuides', e.target.checked)} /> Show removable alignment guides</label>
         {paperStock.stockType === 'perforated' && <div className="mt-3 flex flex-wrap gap-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map((number, index) => <span key={number} className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: PERFORATED_GUIDE_COLORS[index] }} />{number}</span>)}
+          {['1', '2', '3', '4'].map((number, index) => <span key={number} className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: PERFORATED_GUIDE_COLORS[index] }} />{number}</span>)}
         </div>}
         <p className="mt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Default offsets are provisional until Social confirms the physical stock measurements.</p>
         <details className="mt-3">
