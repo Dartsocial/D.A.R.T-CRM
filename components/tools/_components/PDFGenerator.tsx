@@ -183,23 +183,26 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
           img.onload = () => {
             ctx.drawImage(img, x - bleed, y - bleed, cardWidth + (bleed * 2), cardHeight + (bleed * 2));
             
-            if (layout.stockType === 'standard') {
+            if (layout.showGuides) {
               ctx.strokeStyle = '#cccccc';
               ctx.setLineDash([5, 5]);
               ctx.lineWidth = 2;
-              if (col < layout.columns - 1) {
+              if (layout.stockType === 'standard' && col < layout.columns - 1) {
                 const cutX = x + cardWidth + (layout.horizontalGap * 300 / 2);
                 ctx.beginPath();
                 ctx.moveTo(cutX, y - 20);
                 ctx.lineTo(cutX, y + cardHeight + 20);
                 ctx.stroke();
               }
-              if (row < layout.rows - 1) {
+              if (layout.stockType === 'standard' && row < layout.rows - 1) {
                 const cutY = y + cardHeight + (layout.verticalGap * 300 / 2);
                 ctx.beginPath();
                 ctx.moveTo(x - 20, cutY);
                 ctx.lineTo(x + cardWidth + 20, cutY);
                 ctx.stroke();
+              }
+              if (layout.stockType === 'perforated') {
+                ctx.strokeRect(x, y, cardWidth, cardHeight);
               }
             }
             

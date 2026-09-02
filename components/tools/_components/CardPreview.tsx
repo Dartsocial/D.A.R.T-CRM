@@ -190,7 +190,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                           width: `${layout.effectiveCardWidth / layout.pageWidth * 100}%`,
                           height: `${layout.effectiveCardHeight / layout.pageHeight * 100}%`,
                           border: cardNumber 
-                            ? layout.stockType === 'standard' ? '1px dashed hsl(var(--muted-foreground))' : '1px solid hsl(var(--border))'
+                            ? layout.showGuides ? '1px dashed hsl(var(--muted-foreground))' : '1px solid transparent'
                             : '1px dashed hsl(var(--border))',
                           backgroundColor: cardNumber 
                             ? 'hsl(var(--muted) / 0.3)' 

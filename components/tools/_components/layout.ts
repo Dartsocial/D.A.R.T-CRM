@@ -14,6 +14,7 @@ export interface PaperStockSettings {
   horizontalGap: number;
   verticalGap: number;
   bleed: number;
+  showGuides: boolean;
   columns: number;
   rows: number;
 }
@@ -35,10 +36,10 @@ export interface PaperLayout extends PaperStockSettings {
 export const DPI = 300;
 export const PRINT_ALIGNMENT_OFFSET_PX = -2;
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
-  version: 2,
+  version: 3,
   stockType: 'perforated',
   pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'landscape',
-  topMargin: 0.5, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125,
+  topMargin: 0.25, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, bleed: 0.125, showGuides: true,
   columns: 2, rows: 5,
 };
 
