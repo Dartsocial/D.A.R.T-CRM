@@ -101,22 +101,10 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     error,
     refreshTemplates,
     getTemplatesByCategory,
-    deleteTemplate,
     replaceTemplate
   } = useTemplateStorage();
 
   const filteredTemplates = getTemplatesByCategory(selectedCategory);
-
-  const handleDelete = async (template: Template) => {
-    if (!confirm(`Are you sure you want to delete "${template.name}"?`)) {
-      return;
-    }
-
-    const success = await deleteTemplate(template.id);
-    if (success && selectedTemplate === template.path) {
-      onTemplateSelect(''); // Clear selection if deleted template was selected
-    }
-  };
 
   const handleReplace = async (template: Template, file: File) => {
     setReplacingTemplateId(template.id);
@@ -332,37 +320,16 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                           </span>
                         ))}
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(template);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded"
-                        style={{
-                          color: 'hsl(var(--destructive))',
-                          backgroundColor: 'hsl(var(--destructive) / 0.1)',
-                          borderRadius: 'calc(var(--radius) - 2px)'
-                        }}
-                        title="Delete template"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'hsl(var(--destructive) / 0.2)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'hsl(var(--destructive) / 0.1)';
-                        }}
-                      >
-                        🗑️
-                      </button>
                       <label
-                        className="p-1 rounded cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-2 py-1 rounded cursor-pointer"
                         style={{
                           color: 'hsl(var(--primary))',
                           backgroundColor: 'hsl(var(--primary) / 0.1)',
                           borderRadius: 'calc(var(--radius) - 2px)'
                         }}
-                        title="Replace template image"
+                        title="Manage template image"
                       >
-                        {replacingTemplateId === template.id ? 'Replacing...' : 'Replace'}
+                        {replacingTemplateId === template.id ? 'Managing...' : 'Manage'}
                         <input
                           type="file"
                           accept="image/png,image/jpeg,image/webp"
