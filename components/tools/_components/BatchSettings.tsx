@@ -101,7 +101,8 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
   const layoutOptions = [
     { count: 4, layout: '2×2', description: 'Small batch, more spacing' },
     { count: 6, layout: '2×3', description: 'Medium batch, good spacing' },
-    { count: 8, layout: '2×4', description: 'Full A4, maximum efficiency' }
+    { count: 8, layout: '2×4', description: 'One full perforated sheet' },
+    { count: 10, layout: '8 + 2', description: 'Ten cards across two sheets' }
   ];
 
   const handleQuickCounts = (count: number) => {
