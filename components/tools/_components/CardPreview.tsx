@@ -81,7 +81,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
             className="text-sm mb-2"
             style={{ color: 'hsl(var(--muted-foreground))' }}
           >
-            <div>Card size: {layout.cardWidth}×{layout.cardHeight}in</div>
+            <div>Card size: {layout.effectiveCardWidth / 300}×{layout.effectiveCardHeight / 300}in</div>
             <div>Paper: {layout.pageSize === 'a4' ? 'A4 (210×297mm)' : 'Letter (8.5×11in)'}</div>
           </div>
           {/* Flip Controls */}

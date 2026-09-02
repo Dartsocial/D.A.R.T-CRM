@@ -3,6 +3,7 @@ export type CardOrientation = 'portrait' | 'landscape';
 export type PaperStockType = 'perforated' | 'standard';
 
 export interface PaperStockSettings {
+  version: number;
   stockType: PaperStockType;
   pageSize: PageSize;
   cardWidth: number;
@@ -27,8 +28,9 @@ export interface PaperLayout extends PaperStockSettings {
 
 export const DPI = 300;
 export const DEFAULT_PAPER_STOCK: PaperStockSettings = {
+  version: 1,
   stockType: 'perforated',
-  pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'portrait',
+  pageSize: 'letter', cardWidth: 2, cardHeight: 3.5, orientation: 'landscape',
   topMargin: 0.25, leftMargin: 0.25, horizontalGap: 0.25, verticalGap: 0.25, bleed: 0.125,
 };
 
