@@ -14,6 +14,11 @@ export const tools = [
     description: "Calculate hours and pay across multiple weeks",
   },
   {
+    name: "Punch Card Maker",
+    path: "/Tools/punch-card-maker",
+    description: "Generate printable punch cards",
+  },
+  {
     name: "DartBucks Generator",
     path: "/Tools/dart-bucks-generator",
     description: "Generate printable DartBucks with batch serial tracking",
