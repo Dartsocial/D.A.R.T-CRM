@@ -187,7 +187,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                                 <img
                                   src={templatePath}
                                   alt={`Card ${cardNumber}`}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-contain bg-white"
                                   onError={(e) => {
                                     // Fallback for missing images
                                     const target = e.target as HTMLImageElement;

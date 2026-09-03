@@ -102,7 +102,12 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         templateImg.crossOrigin = 'anonymous';
         
         templateImg.onload = () => {
-          ctx.drawImage(templateImg, 0, 0, cardWidth, cardHeight);
+          const scale = Math.min(cardWidth / templateImg.width, cardHeight / templateImg.height);
+          const fittedWidth = templateImg.width * scale;
+          const fittedHeight = templateImg.height * scale;
+          const fittedX = (cardWidth - fittedWidth) / 2;
+          const fittedY = (cardHeight - fittedHeight) / 2;
+          ctx.drawImage(templateImg, fittedX, fittedY, fittedWidth, fittedHeight);
           ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
           ctx.font = 'bold 24px Arial';
           ctx.textAlign = 'right';
