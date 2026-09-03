@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { getCardPosition, type PaperLayout } from './layout';
+import { getCardPosition, getPerforatedCornerGuideCenter, getPerforatedGuideColor, type PaperLayout } from './layout';
 
 interface CardPreviewProps {
   templatePath: string;
@@ -297,6 +297,27 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                     );
                   })}
                 </div>
+
+                {layout.showGuides && layout.stockType === 'perforated' && [0, 1, 2, 3].map((guideIndex) => {
+                  const guide = getPerforatedCornerGuideCenter(layout, guideIndex);
+                  return (
+                    <div
+                      key={guideIndex}
+                      aria-label={`Alignment guide ${guideIndex + 1}`}
+                      className="pointer-events-none absolute z-20"
+                      style={{
+                        left: `${guide.x / layout.pageWidth * 100}%`,
+                        top: `${guide.y / layout.pageHeight * 100}%`,
+                        width: '12px',
+                        height: '12px',
+                        transform: 'translate(-50%, -50%)',
+                        border: `2px solid ${getPerforatedGuideColor(guideIndex)}`,
+                        backgroundColor: 'hsl(var(--card) / 0.75)',
+                        boxShadow: `0 0 0 1px hsl(var(--background) / 0.8)`
+                      }}
+                    />
+                  );
+                })}
 
                 {/* Sheet label */}
                 <div 

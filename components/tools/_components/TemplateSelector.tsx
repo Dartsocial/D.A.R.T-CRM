@@ -93,6 +93,11 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [replacingTemplateId, setReplacingTemplateId] = useState<string | null>(null);
+  const [managingTemplate, setManagingTemplate] = useState<Template | null>(null);
+  const [replacementFile, setReplacementFile] = useState<File | null>(null);
+  const [replacementPreview, setReplacementPreview] = useState<string | null>(null);
+  const [currentDimensions, setCurrentDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [previewDimensions, setPreviewDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const {
     templates,
@@ -106,13 +111,41 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
   const filteredTemplates = getTemplatesByCategory(selectedCategory);
 
-  const handleReplace = async (template: Template, file: File) => {
+  const closeManage = () => {
+    if (replacementPreview) URL.revokeObjectURL(replacementPreview);
+    setManagingTemplate(null);
+    setReplacementFile(null);
+    setReplacementPreview(null);
+    setCurrentDimensions(null);
+    setPreviewDimensions(null);
+  };
+
+  const openManage = (template: Template) => {
+    setManagingTemplate(template);
+    setReplacementFile(null);
+    setReplacementPreview(null);
+    setCurrentDimensions(null);
+    setPreviewDimensions(null);
+  };
+
+  const handleReplacementSelect = (file: File) => {
+    if (replacementPreview) URL.revokeObjectURL(replacementPreview);
+    const previewUrl = URL.createObjectURL(file);
+    setReplacementFile(file);
+    setReplacementPreview(previewUrl);
+    setPreviewDimensions(null);
+  };
+
+  const handleReplace = async () => {
+    if (!managingTemplate || !replacementFile) return;
+    const template = managingTemplate;
     setReplacingTemplateId(template.id);
-    const success = await replaceTemplate(template, file);
+    const success = await replaceTemplate(template, replacementFile);
     setReplacingTemplateId(null);
     if (success && selectedTemplate === template.path) {
       onTemplateSelect(`${template.path.split('?')[0]}?v=${Date.now()}`);
     }
+    if (success) closeManage();
   };
 
   if (error) {
@@ -320,8 +353,13 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                           </span>
                         ))}
                       </div>
-                      <label
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 px-2 py-1 rounded cursor-pointer"
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openManage(template);
+                        }}
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 px-2 py-1 rounded cursor-pointer"
                         style={{
                           color: 'hsl(var(--primary))',
                           backgroundColor: 'hsl(var(--primary) / 0.1)',
@@ -330,18 +368,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                         title="Manage template image"
                       >
                         {replacingTemplateId === template.id ? 'Managing...' : 'Manage'}
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          className="hidden"
-                          disabled={replacingTemplateId !== null}
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) void handleReplace(template, file);
-                            event.currentTarget.value = '';
-                          }}
-                        />
-                      </label>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -464,6 +491,58 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       >
         🔄 {isLoading ? 'Refreshing...' : 'Refresh Templates'}
       </button>
+
+      {managingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="manage-template-title">
+          <div className="w-full max-w-2xl rounded-lg p-6" style={{ backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="manage-template-title" className="text-lg font-semibold">Manage {managingTemplate.name}</h2>
+                <p className="mt-1 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Review the current card, then choose a replacement.</p>
+              </div>
+              <button type="button" onClick={closeManage} className="text-xl leading-none" aria-label="Close manage dialog">×</button>
+            </div>
+
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+              {[
+                { title: 'Current card', src: managingTemplate.path, dimensions: 'current' },
+                { title: 'New card', src: replacementPreview, dimensions: 'replacement' }
+              ].map(({ title, src, dimensions }) => (
+                <div key={title} className="space-y-2">
+                  <h3 className="text-sm font-medium">{title}</h3>
+                  <div className="flex aspect-[1.7] items-center justify-center overflow-hidden rounded-md border" style={{ borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted) / 0.3)' }}>
+                    {src ? <img src={src} alt={`${title} preview`} className="h-full w-full object-contain" onLoad={(event) => {
+                      const imageDimensions = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight };
+                      if (dimensions === 'replacement') setPreviewDimensions(imageDimensions);
+                      if (dimensions === 'current') setCurrentDimensions(imageDimensions);
+                    }} /> : <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Choose an image to preview</span>}
+                  </div>
+                  <p className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    {dimensions === 'current' ? currentDimensions ? `${currentDimensions.width} × ${currentDimensions.height}px` : 'Reading dimensions...' : replacementFile ? `${previewDimensions ? `${previewDimensions.width} × ${previewDimensions.height}px` : 'Reading dimensions...'}` : 'Replacement dimensions will appear here.'}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <label className="cursor-pointer rounded-md border px-3 py-2 text-sm" style={{ borderColor: 'hsl(var(--border))' }}>
+                Choose replacement
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) handleReplacementSelect(file);
+                  event.currentTarget.value = '';
+                }} />
+              </label>
+              <div className="flex gap-2">
+                <button type="button" onClick={closeManage} className="rounded-md border px-3 py-2 text-sm" style={{ borderColor: 'hsl(var(--border))' }}>Cancel</button>
+                <button type="button" onClick={() => void handleReplace()} disabled={!replacementFile || replacingTemplateId !== null} className="rounded-md px-3 py-2 text-sm" style={{ backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', opacity: !replacementFile || replacingTemplateId !== null ? 0.5 : 1 }}>
+                  {replacingTemplateId ? 'Replacing...' : 'Replace template'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
