@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
-import { drawImageCover, getCardPosition, type PaperLayout } from './layout';
+import { getCardPosition, type PaperLayout } from './layout';
 
 interface PunchCard {
   front: string;
@@ -102,7 +102,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         templateImg.crossOrigin = 'anonymous';
         
         templateImg.onload = () => {
-          drawImageCover(ctx, templateImg, -bleed, -bleed, cardWidth + (bleed * 2), cardHeight + (bleed * 2));
+          ctx.drawImage(templateImg, 0, 0, cardWidth, cardHeight);
           ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
           ctx.font = 'bold 24px Arial';
           ctx.textAlign = 'right';
