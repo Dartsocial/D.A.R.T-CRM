@@ -2,19 +2,25 @@
 "use client";
 
 import React, { useState } from 'react';
-import { getCardPosition, getPerforatedCornerGuideCenter, getPerforatedGuideColor, type PaperLayout } from './layout';
 
 interface CardPreviewProps {
   templatePath: string;
   cardCount: number;
   batchId?: string;
-  layout: PaperLayout;
 }
 
-const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batchId, layout }) => {
+const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batchId }) => {
   const [showBackSide, setShowBackSide] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
 
+  // Calculate layout based on card count
+  const getLayout = (count: number) => {
+    if (count <= 4) return { cols: 2, rows: 2, cardsPerSheet: 4 };
+    if (count <= 6) return { cols: 2, rows: 3, cardsPerSheet: 6 };
+    return { cols: 2, rows: 4, cardsPerSheet: 8 };
+  };
+
+  const layout = getLayout(cardCount);
   const sheetsNeeded = Math.ceil(cardCount / layout.cardsPerSheet);
   
   // Generate card numbers for preview
@@ -59,13 +65,13 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
               fontFamily: 'var(--font-sans)'
             }}
           >
-            {layout.pageSize === 'a4' ? 'A4' : 'Letter'} Layout Preview
+            A4 Layout Preview
           </h3>
           <p 
             className="text-sm"
             style={{ color: 'hsl(var(--muted-foreground))' }}
           >
-            {layout.columns}×{layout.rows} layout • {cardCount} total cards • {sheetsNeeded} sheet{sheetsNeeded > 1 ? 's' : ''}
+            {layout.cols}×{layout.rows} layout • {cardCount} total cards • {sheetsNeeded} sheet{sheetsNeeded > 1 ? 's' : ''}
           </p>
           {batchId && (
             <p 
@@ -81,8 +87,8 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
             className="text-sm mb-2"
             style={{ color: 'hsl(var(--muted-foreground))' }}
           >
-            <div>Card size: {layout.effectiveCardWidth / 300}×{layout.effectiveCardHeight / 300}in</div>
-            <div>Paper: {layout.pageSize === 'a4' ? 'A4 (210×297mm)' : 'Letter (8.5×11in)'}</div>
+            <div>Card size: 92×54mm</div>
+            <div>Paper: A4 (210×297mm)</div>
           </div>
           {/* Flip Controls */}
           <div className="flex space-x-2">
@@ -165,15 +171,49 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
               <div 
                 className="relative mx-auto rounded-lg shadow-sm"
                 style={{ 
-                   width: '300px',
-                   height: `${300 * layout.pageHeight / layout.pageWidth}px`,
+                  width: '300px', 
+                  height: '424px', // A4 ratio scaled down
+                  padding: '20px',
                   backgroundColor: 'hsl(var(--card))',
                   border: '2px solid hsl(var(--border))',
                   borderRadius: 'var(--radius)',
                   boxShadow: 'var(--shadow-md)'
                 }}
               >
-                <div className="absolute inset-0">
+                
+                {/* Cut line guides */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {/* Vertical center line */}
+                  <div 
+                    className="absolute left-1/2 top-5 bottom-5 w-px transform -translate-x-px"
+                    style={{ 
+                      borderLeft: `1px dashed hsl(var(--border))`,
+                      opacity: 0.6
+                    }}
+                  ></div>
+                  
+                  {/* Horizontal lines */}
+                  {Array.from({ length: layout.rows - 1 }, (_, i) => (
+                    <div 
+                      key={i}
+                      className="absolute left-5 right-5"
+                      style={{ 
+                        top: `${((i + 1) / layout.rows) * 100}%`,
+                        borderTop: `1px dashed hsl(var(--border))`,
+                        opacity: 0.6
+                      }}
+                    ></div>
+                  ))}
+                </div>
+
+                {/* Cards Grid */}
+                <div 
+                  className="grid gap-2 h-full"
+                  style={{ 
+                    gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
+                    gridTemplateRows: `repeat(${layout.rows}, 1fr)`
+                  }}
+                >
                   {cardNumbers.map((cardNumber, index) => {
                     const isCardFlipped = cardNumber ? flippedCards.has(cardNumber) : false;
                     const displayBackSide = showBackSide || isCardFlipped;
@@ -183,12 +223,9 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                         key={index}
                         className="relative overflow-hidden cursor-pointer transition-transform hover:scale-105"
                         style={{
-                          position: 'absolute',
-                          left: `${getCardPosition(layout, index).x / layout.pageWidth * 100}%`,
-                          top: `${getCardPosition(layout, index).y / layout.pageHeight * 100}%`,
-                          width: `${layout.effectiveCardWidth / layout.pageWidth * 100}%`,
-                          height: `${layout.effectiveCardHeight / layout.pageHeight * 100}%`,
-                          border: cardNumber ? '1px solid transparent' : '1px dashed hsl(var(--border))',
+                          border: cardNumber 
+                            ? '1px solid hsl(var(--border))' 
+                            : '1px dashed hsl(var(--border))',
                           backgroundColor: cardNumber 
                             ? 'hsl(var(--muted) / 0.3)' 
                             : 'transparent',
@@ -204,44 +241,81 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                               {displayBackSide ? (
                                 // Back side preview
                                 <div 
-                                  className="w-full h-full flex flex-col items-center justify-center relative"
-                                  style={{ backgroundColor: 'hsl(var(--card))' }}
+                                  className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
+                                  style={{
+                                    backgroundColor: '#f8fafc',
+                                    border: '2px solid #111827',
+                                    boxShadow: 'inset 0 0 0 2px rgba(127,29,29,0.8)'
+                                  }}
                                 >
-                                  {/* Dartboard watermark */}
+                                  <div
+                                    className="absolute inset-0"
+                                    style={{
+                                      backgroundImage: 'linear-gradient(135deg, rgba(15,23,42,0.05) 0%, rgba(15,23,42,0.05) 50%, transparent 50%, transparent 100%)',
+                                      backgroundSize: '24px 24px'
+                                    }}
+                                  />
+
                                   <div className="absolute inset-0 flex items-center justify-center opacity-15">
                                     <img
                                       src="/images/home/dartboard.png"
                                       alt="Dartboard"
-                                      className="w-8 h-8 object-contain"
+                                      className="object-contain"
+                                      style={{
+                                        width: '85%',
+                                        height: '85%',
+                                        transform: 'rotate(-20deg)'
+                                      }}
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         target.style.display = 'none';
                                       }}
                                     />
                                   </div>
-                                  
-                                  {/* Batch number */}
-                                  <div 
-                                    className="absolute bottom-1 right-1 text-xs font-bold"
-                                    style={{ color: 'hsl(var(--foreground))' }}
+
+                                  <div
+                                    className="absolute top-1.5 left-1/2 -translate-x-1/2 text-[7px] font-bold tracking-widest"
+                                    style={{ color: '#7f1d1d' }}
                                   >
-                                    {generateBatchNumber(cardNumber)}
+                                    COPY RESTRICTED
                                   </div>
-                                  
-                                  {/* Date */}
-                                  <div 
-                                    className="absolute bottom-1 left-1 text-xs"
-                                    style={{ color: 'hsl(var(--muted-foreground))' }}
+
+                                  <div
+                                    className="absolute inset-x-0 top-5 flex justify-center items-center text-center px-2"
+                                    style={{ color: '#111827', fontSize: '7px', fontWeight: 700 }}
+                                  >
+                                    DARTS PROGRAM • AUTHORIZED PRINT ONLY
+                                  </div>
+
+                                  <div
+                                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-black"
+                                    style={{
+                                      color: 'rgba(127,29,29,0.8)',
+                                      transform: 'translate(-50%, -50%) rotate(12deg)'
+                                    }}
+                                  >
+                                    REPRODUCTION
+                                  </div>
+
+                                  <div
+                                    className="absolute bottom-1 left-1 text-[7px] font-bold"
+                                    style={{ color: '#111827' }}
+                                  >
+                                    Batch {generateBatchNumber(cardNumber)}
+                                  </div>
+
+                                  <div
+                                    className="absolute bottom-1 right-1 text-[7px] font-bold"
+                                    style={{ color: '#111827' }}
                                   >
                                     {new Date().toLocaleDateString()}
                                   </div>
-                                  
-                                  {/* Back indicator */}
-                                  <div 
-                                    className="text-xs font-medium"
-                                    style={{ color: 'hsl(var(--muted-foreground))' }}
+
+                                  <div
+                                    className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[6px] uppercase tracking-[0.2em]"
+                                    style={{ color: '#374151' }}
                                   >
-                                    BACK
+                                    VOID • DUPLICATION PROHIBITED
                                   </div>
                                 </div>
                               ) : (
@@ -274,11 +348,6 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                                 #{cardNumber.toString().padStart(3, '0')}
                               </div>
                             )}
-                            {!displayBackSide && (
-                              <div className="absolute bottom-1 right-1 text-xs font-bold" style={{ color: 'hsl(var(--foreground))' }}>
-                                {generateBatchNumber(cardNumber)}
-                              </div>
-                            )}
                             
                             {/* Flip indicator */}
                             <div 
@@ -297,27 +366,6 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                     );
                   })}
                 </div>
-
-                {layout.showGuides && layout.stockType === 'perforated' && [0, 1, 2, 3].map((guideIndex) => {
-                  const guide = getPerforatedCornerGuideCenter(layout, guideIndex);
-                  return (
-                    <div
-                      key={guideIndex}
-                      aria-label={`Alignment guide ${guideIndex + 1}`}
-                      className="pointer-events-none absolute z-20"
-                      style={{
-                        left: `${guide.x / layout.pageWidth * 100}%`,
-                        top: `${guide.y / layout.pageHeight * 100}%`,
-                        width: '12px',
-                        height: '12px',
-                        transform: 'translate(-50%, -50%)',
-                        border: `2px solid ${getPerforatedGuideColor(guideIndex)}`,
-                        backgroundColor: 'hsl(var(--card) / 0.75)',
-                        boxShadow: `0 0 0 1px hsl(var(--background) / 0.8)`
-                      }}
-                    />
-                  );
-                })}
 
                 {/* Sheet label */}
                 <div 
@@ -359,7 +407,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
         >
           <li>• Click <strong>Front/Back Side</strong> buttons to view all cards at once</li>
           <li>• Click individual cards to flip them (🔄 icon appears)</li>
-          <li>• Back side shows dartboard watermark + batch number</li>
+          <li>• Back side includes anti-copy security watermark, stripes, and copy-control text</li>
           <li>• Front side shows template + card number</li>
         </ul>
       </div>
@@ -416,9 +464,9 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
               className="space-y-1"
               style={{ color: 'hsl(var(--muted-foreground))' }}
             >
-              <li>• Dartboard logo watermark (15% opacity)</li>
+              <li>• Anti-copy watermark + security border</li>
               <li>• Batch number ({batchId || 'XXXXXX'}-001)</li>
-              <li>• Print date stamp</li>
+              <li>• Printed date + copy restriction text</li>
             </ul>
           </div>
         </div>

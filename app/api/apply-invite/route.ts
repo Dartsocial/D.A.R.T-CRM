@@ -2,10 +2,17 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: Request) {
-  const { invite } = await req.json();
   const supabase = createRouteHandlerClient({ cookies });
+  let inviteCode: string | undefined;
+
+  try {
+    inviteCode = (await req.json()).invite;
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
   const {
     data: { user },
@@ -15,39 +22,57 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No authenticated user" }, { status: 401 });
   }
 
-  // 1. Find invite
-  const { data: inviteData, error: inviteError } = await supabase
-    .from('invites')
-    .select('role_id, code')
-    .eq('code', invite)
-    .single();
+  if (!inviteCode || !user.email) {
+    return NextResponse.json({ error: 'Invitation and verified account email are required' }, { status: 400 });
+  }
 
-  if (inviteError || !inviteData) {
+  const serviceClient = await createClient('service');
+
+  // 1. Find invite
+  const { data: inviteData, error: inviteError } = await serviceClient
+    .from('invites')
+    .select('role_id, code, email')
+    .eq('code', inviteCode)
+    .maybeSingle();
+
+  if (inviteError || !inviteData || inviteData.email?.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
     return NextResponse.json({ error: "Invalid invite" }, { status: 400 });
   }
 
-  // 2. Get role name
-  const { data: roleData } = await supabase
-    .from('roles')
-    .select('role')
-    .eq('id', inviteData.role_id)
-    .single();
+  const { data: existingProfile, error: profileReadError } = await serviceClient
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle();
 
-  if (!roleData) {
-    return NextResponse.json({ error: "Role not found" }, { status: 400 });
+  if (profileReadError) {
+    return NextResponse.json({ error: 'Could not load member profile' }, { status: 500 });
   }
 
-  // 3. Update user profile with role
-  await supabase
-    .from('profiles')
-    .update({ role: roleData.role })
-    .eq('id', user.id);
+  const invitedDisplayName = typeof user.user_metadata?.display_name === 'string'
+    ? user.user_metadata.display_name.trim()
+    : '';
+  const profileValues = {
+    role: inviteData.role_id,
+    ...(invitedDisplayName ? { display_name: invitedDisplayName } : {}),
+  };
+  const profileWrite = existingProfile
+    ? await serviceClient.from('profiles').update(profileValues).eq('id', user.id)
+    : await serviceClient.from('profiles').insert({ id: user.id, ...profileValues });
+
+  if (profileWrite.error) {
+    return NextResponse.json({ error: 'Could not assign invitation role' }, { status: 500 });
+  }
 
   // 4. Fetch specializations attached to the invite
-  const { data: specializations } = await supabase
+  const { data: specializations, error: specializationReadError } = await serviceClient
     .from('invite_specializations')
     .select('specialization_id, created_by')
-    .eq('invite_code', invite);
+    .eq('invite_code', inviteCode);
+
+  if (specializationReadError) {
+    return NextResponse.json({ error: 'Could not load invitation permissions' }, { status: 500 });
+  }
 
   // 5. Manually insert specializations (if any)
   if (specializations && specializations.length > 0) {
@@ -57,14 +82,24 @@ export async function POST(req: Request) {
       assigned_by: spec.created_by,
     }));
 
-    await supabase.from('user_specializations').insert(inserts);
+    const { error: specializationWriteError } = await serviceClient
+      .from('user_specializations')
+      .insert(inserts);
+
+    if (specializationWriteError) {
+      return NextResponse.json({ error: 'Could not assign invitation permissions' }, { status: 500 });
+    }
   }
 
   // 6. Delete invite after use
-  await supabase
+  const { error: deleteError } = await serviceClient
     .from('invites')
     .delete()
-    .eq('code', invite);
+    .eq('code', inviteCode);
+
+  if (deleteError) {
+    return NextResponse.json({ error: 'Could not finalize invitation' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true });
 }

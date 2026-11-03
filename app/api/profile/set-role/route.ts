@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient("service");
-  const { uuid, role, specializations } = await req.json();
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
+  }
+
+  let body: { uuid?: string; role?: string; specializations?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { uuid, role, specializations } = body;
+  const supabase = auth.serviceClient;
 
   if (!uuid || !role) {
     return NextResponse.json({ error: "Missing UUID or role" }, { status: 400 });
@@ -44,7 +56,7 @@ export async function POST(req: NextRequest) {
       const inserts = specializations.map((specId: string) => ({
         user_id: uuid,
         specialization_id: specId,
-        assigned_by: uuid, // Or use an admin ID if available
+          assigned_by: auth.user.id,
       }));
 
       const { error: insertError } = await supabase

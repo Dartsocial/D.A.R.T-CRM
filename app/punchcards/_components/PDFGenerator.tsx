@@ -63,46 +63,114 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId }
       ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 
       if (isBackSide) {
-        // Generate back side with dartboard logo watermark
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
-        
+
         logoImg.onload = () => {
-          // Draw dartboard logo as watermark (centered, low opacity)
-          ctx.globalAlpha = 0.15;
-          const logoSize = Math.min(CARD_WIDTH, CARD_HEIGHT) * 0.6;
-          const logoX = (CARD_WIDTH - logoSize) / 2;
-          const logoY = (CARD_HEIGHT - logoSize) / 2;
-          ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
-          
-          // Reset opacity for text
-          ctx.globalAlpha = 1.0;
-          
-          // Add batch number (bottom-right)
-          ctx.fillStyle = '#333333';
-          ctx.font = 'bold 36px Arial';
-          ctx.textAlign = 'right';
-          ctx.fillText(card.batchNumber, CARD_WIDTH - 40, CARD_HEIGHT - 40);
-          
-          // Add date (bottom-left)
+          const panelPadding = 18;
+          const borderColor = '#111827';
+          const accentColor = '#7f1d1d';
+
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 7;
+          ctx.strokeRect(panelPadding, panelPadding, CARD_WIDTH - panelPadding * 2, CARD_HEIGHT - panelPadding * 2);
+
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(panelPadding + 18, panelPadding + 18, CARD_WIDTH - (panelPadding + 18) * 2, CARD_HEIGHT - (panelPadding + 18) * 2);
+
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.08)';
+          ctx.lineWidth = 1;
+          for (let i = 0; i < 18; i++) {
+            const x = 24 + i * 54;
+            ctx.beginPath();
+            ctx.moveTo(x, 20);
+            ctx.lineTo(x - 24, CARD_HEIGHT - 20);
+            ctx.stroke();
+          }
+
+          ctx.save();
+          ctx.translate(CARD_WIDTH / 2, CARD_HEIGHT / 2);
+          ctx.rotate(-Math.PI / 7);
+          ctx.globalAlpha = 0.12;
+          const logoSize = Math.min(CARD_WIDTH, CARD_HEIGHT) * 0.66;
+          ctx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
+          ctx.restore();
+
+          ctx.fillStyle = accentColor;
+          ctx.textAlign = 'center';
+          ctx.font = '700 26px Arial';
+          ctx.fillText('COPY RESTRICTED', CARD_WIDTH / 2, 72);
+
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 20px Arial';
+          ctx.fillText('DARTS PROGRAM • AUTHORIZED PRINT ONLY', CARD_WIDTH / 2, CARD_HEIGHT / 2 - 16);
+
+          ctx.save();
+          ctx.translate(CARD_WIDTH / 2, CARD_HEIGHT / 2 + 36);
+          ctx.rotate(Math.PI / 10);
+          ctx.fillStyle = 'rgba(127, 29, 29, 0.78)';
+          ctx.font = '900 38px Arial';
+          ctx.fillText('REPRODUCTION', 0, 0);
+          ctx.restore();
+
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 18px Arial';
+          ctx.fillText('VOID • UNAUTHORIZED DUPLICATION PROHIBITED', CARD_WIDTH / 2, CARD_HEIGHT - 82);
+
           ctx.textAlign = 'left';
-          ctx.font = '24px Arial';
-          ctx.fillText(new Date().toLocaleDateString(), 40, CARD_HEIGHT - 40);
-          
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 21px Arial';
+          ctx.fillText('Batch', 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(card.batchNumber, 40, CARD_HEIGHT - 24);
+
+          ctx.textAlign = 'right';
+          ctx.font = '700 21px Arial';
+          ctx.fillText('Printed', CARD_WIDTH - 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(new Date().toLocaleDateString(), CARD_WIDTH - 40, CARD_HEIGHT - 24);
+
           resolve(canvas.toDataURL('image/png'));
         };
 
         logoImg.onerror = () => {
-          // Fallback without logo
-          ctx.fillStyle = '#333333';
-          ctx.font = 'bold 36px Arial';
-          ctx.textAlign = 'right';
-          ctx.fillText(card.batchNumber, CARD_WIDTH - 40, CARD_HEIGHT - 40);
-          
+          const panelPadding = 18;
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+          ctx.strokeStyle = '#111827';
+          ctx.lineWidth = 7;
+          ctx.strokeRect(panelPadding, panelPadding, CARD_WIDTH - panelPadding * 2, CARD_HEIGHT - panelPadding * 2);
+
+          ctx.fillStyle = '#7f1d1d';
+          ctx.textAlign = 'center';
+          ctx.font = '700 26px Arial';
+          ctx.fillText('COPY RESTRICTED', CARD_WIDTH / 2, 72);
+
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 20px Arial';
+          ctx.fillText('DARTS PROGRAM • AUTHORIZED PRINT ONLY', CARD_WIDTH / 2, CARD_HEIGHT / 2 - 16);
+
+          ctx.fillStyle = 'rgba(127, 29, 29, 0.8)';
+          ctx.font = '900 38px Arial';
+          ctx.fillText('REPRODUCTION', CARD_WIDTH / 2, CARD_HEIGHT / 2 + 32);
+
           ctx.textAlign = 'left';
-          ctx.font = '24px Arial';
-          ctx.fillText(new Date().toLocaleDateString(), 40, CARD_HEIGHT - 40);
-          
+          ctx.font = '700 21px Arial';
+          ctx.fillStyle = '#111827';
+          ctx.fillText('Batch', 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(card.batchNumber, 40, CARD_HEIGHT - 24);
+
+          ctx.textAlign = 'right';
+          ctx.font = '700 21px Arial';
+          ctx.fillText('Printed', CARD_WIDTH - 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(new Date().toLocaleDateString(), CARD_WIDTH - 40, CARD_HEIGHT - 24);
+
           resolve(canvas.toDataURL('image/png'));
         };
 

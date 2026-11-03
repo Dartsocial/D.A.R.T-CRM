@@ -22,36 +22,34 @@ export default function OAuthCallback() {
       const user = userData?.user;
 
       if (user && invite) {
-        // 1. Attach invite to metadata (optional but good)
-        await supabase.auth.updateUser({
-          data: { invite },
+        const response = await fetch('/api/apply-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invite }),
         });
 
-        // 2. Lookup the invite
-        const { data: inviteData, error: inviteError } = await supabase
-          .from("invites")
-          .select("role_id")
-          .eq("code", invite)
-          .maybeSingle();
-
-        if (!inviteError && inviteData?.role_id) {
-          // 3. Update profile role
-          await supabase
-            .from("profiles")
-            .update({ role: inviteData.role_id })
-            .eq("id", user.id);
-
-          // 4. Delete invite after use
-          await supabase
-            .from("invites")
-            .delete()
-            .eq("code", invite);
+        if (!response.ok) {
+          await supabase.auth.signOut();
+          window.location.href = '/sign-in?error=invalid-invitation-link';
+          return;
         }
 
-        // 5. Clean up metadata (remove invite)
-        await supabase.auth.updateUser({
-          data: { invite: null },
-        });
+        window.location.href = '/protected/reset-password';
+        return;
+      }
+
+      if (user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileError || !profile) {
+          await supabase.auth.signOut();
+          window.location.href = '/sign-in?error=invitation-required';
+          return;
+        }
       }
 
       // 6. Get last page from cookie and redirect there

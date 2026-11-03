@@ -1,7 +1,12 @@
-import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function DELETE(req: Request) {
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
+  }
+
   try {
     const data = await req.json();
     const { id } = data;
@@ -10,7 +15,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Specialization ID is required" }, { status: 400 });
     }
 
-    const supabase = await createClient("service");
+    const supabase = auth.serviceClient;
 
     // First, check if there are any users with this specialization
     const { count, error: countError } = await supabase

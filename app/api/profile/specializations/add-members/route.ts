@@ -1,7 +1,12 @@
-import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function POST(req: Request) {
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
+  }
+
   try {
     const { roleId, userIds } = await req.json();
 
@@ -11,7 +16,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const supabase = await createClient("service");
+    const supabase = auth.serviceClient;
 
     // Verify the role exists
     const { data: role, error: roleError } = await supabase
@@ -29,7 +34,7 @@ export async function POST(req: Request) {
     const insertData = userIds.map(userId => ({
       user_id: userId,
       specialization_id: roleId,
-      assigned_by: "system" // This could be the current user's ID in a real implementation
+      assigned_by: auth.user.id
     }));
 
     // Add the users to the role

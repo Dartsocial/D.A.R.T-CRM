@@ -1,14 +1,24 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function DELETE(req: Request) {
-  const { uuid } = await req.json();
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
+  }
+
+  let uuid: string | undefined;
+  try {
+    uuid = (await req.json()).uuid;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
   if (!uuid) {
     return NextResponse.json({ error: "Missing UUID" }, { status: 400 });
   }
 
-  const supabase = await createClient("service");
+  const supabase = auth.serviceClient;
 
   // Delete user_specializations
   await supabase

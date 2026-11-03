@@ -1,7 +1,12 @@
-import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function POST(req: Request) {
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
+  }
+
   try {
     const { roleId, userId } = await req.json();
 
@@ -11,7 +16,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const supabase = await createClient("service");
+    const supabase = auth.serviceClient;
 
     // Remove the user from the role
     const { error } = await supabase

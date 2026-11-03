@@ -1,7 +1,12 @@
-import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function POST(req: Request) {
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
+  }
+
   try {
     const data = await req.json();
     const { name, description, color, role_type } = data;
@@ -10,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Name and role type are required" }, { status: 400 });
     }
 
-    const supabase = await createClient("service");
+    const supabase = auth.serviceClient;
 
     // First, get the role ID for the specified role type
     const { data: roleData, error: roleError } = await supabase

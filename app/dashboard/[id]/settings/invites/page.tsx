@@ -10,6 +10,7 @@ import './_components/invites.scss';
 
 interface Invite {
   code: string;
+  email: string | null;
   role: string;               // raw role_id
   inviter: {
     name: string | null;
@@ -91,8 +92,9 @@ export default function InvitesPage() {
         </div>
 
         <div className="invites-table">
-          <div className="table-header grid grid-cols-6 gap-4 p-3">
+          <div className="table-header grid grid-cols-7 gap-4 p-3">
             <div>Role</div>
+            <div>Member email</div>
             <div>Inviter</div>
             <div>Invite Code</div>
             <div>Uses</div>
@@ -110,8 +112,9 @@ export default function InvitesPage() {
               const displayName = inv.inviter.name ?? 'Unknown';
               const isDeleting = deletingCode === inv.code;
               return (
-                <div key={inv.code} className="invite-row grid grid-cols-6 gap-4 items-center p-3 border-t hover:bg-gray-50">
+                <div key={inv.code} className="invite-row grid grid-cols-7 gap-4 items-center p-3 border-t hover:bg-gray-50">
                   <div className="capitalize font-medium">{displayRole}</div>
+                  <div>{inv.email || '—'}</div>
 
                   <div className="flex items-center space-x-2">
                     <img src={inv.inviter.avatar} alt={displayName} className="w-8 h-8 rounded-full" />
@@ -145,7 +148,7 @@ export default function InvitesPage() {
               <button className="absolute top-3 right-3 text-gray-600 hover:text-gray-800" onClick={() => setShowGenerator(false)}>
                 <X size={24} />
               </button>
-              <InviteGeneratorClient defaultRole="client" onCreate={handleCreate} />
+              <InviteGeneratorClient defaultRole="client" roles={Object.values(rolesMap)} />
             </div>
           </div>
         )}

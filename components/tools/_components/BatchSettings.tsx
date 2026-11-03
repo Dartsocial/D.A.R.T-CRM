@@ -2,16 +2,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { PERFORATED_GUIDE_COLORS, type PaperLayout, type PaperStockSettings } from './layout';
 
 interface BatchSettingsProps {
   cardCount: number;
   onCardCountChange: (count: number) => void;
   batchName: string;
   onBatchNameChange: (name: string) => void;
-  paperStock: PaperStockSettings;
-  onPaperStockChange: (settings: PaperStockSettings) => void;
-  layout: PaperLayout;
 }
 
 interface CollapsibleSectionProps {
@@ -96,13 +92,12 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
   cardCount,
   onCardCountChange,
   batchName,
-  onBatchNameChange, paperStock, onPaperStockChange, layout
+  onBatchNameChange
 }) => {
   const layoutOptions = [
     { count: 4, layout: '2×2', description: 'Small batch, more spacing' },
     { count: 6, layout: '2×3', description: 'Medium batch, good spacing' },
-    { count: 8, layout: '2×4', description: 'One full perforated sheet' },
-    { count: 10, layout: '8 + 2', description: 'Ten cards across two sheets' }
+    { count: 8, layout: '2×4', description: 'Full A4, maximum efficiency' }
   ];
 
   const handleQuickCounts = (count: number) => {
@@ -111,24 +106,6 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
 
   const calculateSheets = (totalCards: number, cardsPerSheet: number) => {
     return Math.ceil(totalCards / cardsPerSheet);
-  };
-
-  const updatePaperStock = (field: keyof PaperStockSettings, value: string | number) => {
-    const nextSettings = { ...paperStock, [field]: value };
-    onPaperStockChange(nextSettings);
-    if (window.localStorage.getItem('dart-punch-card-paper-stock')) {
-      window.localStorage.setItem('dart-punch-card-paper-stock', JSON.stringify(nextSettings));
-    }
-  };
-  const savePaperStock = (checked: boolean) => checked
-    ? window.localStorage.setItem('dart-punch-card-paper-stock', JSON.stringify(paperStock))
-    : window.localStorage.removeItem('dart-punch-card-paper-stock');
-  const updateCornerOffset = (corner: keyof PaperStockSettings['cornerOffsets'], axis: 'x' | 'y', value: number) => {
-    const nextSettings = { ...paperStock, cornerOffsets: { ...paperStock.cornerOffsets, [corner]: { ...paperStock.cornerOffsets[corner], [axis]: value } } };
-    onPaperStockChange(nextSettings);
-    if (window.localStorage.getItem('dart-punch-card-paper-stock')) {
-      window.localStorage.setItem('dart-punch-card-paper-stock', JSON.stringify(nextSettings));
-    }
   };
 
   return (
@@ -237,7 +214,7 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
               fontFamily: 'var(--font-sans)'
             }}
           >
-            Batch Size Presets
+            Cards per A4 Sheet
           </label>
           <div className="space-y-2">
             {layoutOptions.map(option => (
@@ -342,41 +319,6 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
       </CollapsibleSection>
 
       {/* Print Summary - Always Visible */}
-      <CollapsibleSection title="Paper Stock" defaultOpen={true} icon="📄">
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm col-span-2">Use case
-            <select value={paperStock.stockType} onChange={(e) => updatePaperStock('stockType', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}>
-              <option value="perforated">Pre-perforated stock (no bleed or cut lines)</option>
-              <option value="standard">Standard paper (bleed and cut lines)</option>
-            </select>
-          </label>
-          <label className="text-sm">Page size
-            <select value={paperStock.pageSize} onChange={(e) => updatePaperStock('pageSize', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}><option value="letter">Letter (8.5×11 in)</option><option value="a4">A4 (210×297 mm)</option></select>
-          </label>
-          <label className="text-sm">Card orientation
-            <select value={paperStock.orientation} onChange={(e) => updatePaperStock('orientation', e.target.value)} className="mt-1 w-full rounded-md p-2" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }}><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
-          </label>
-          {([['cardWidth', 'Card width (in)'], ['cardHeight', 'Card height (in)'], ['topMargin', 'Top margin (in)'], ['leftMargin', 'Left margin (in)'], ['horizontalGap', 'Horizontal gap (in)'], ['verticalGap', 'Vertical gap (in)'], ['bleed', 'Bleed (in)']] as const).map(([field, label]) => <label key={field} className="text-sm">{label}<input type="number" min="0" step="0.01" disabled={field === 'bleed' && paperStock.stockType === 'perforated'} value={paperStock[field]} onChange={(e) => updatePaperStock(field, Number(e.target.value) || 0)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>)}
-        </div>
-        <label className="mt-4 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" onChange={(e) => savePaperStock(e.target.checked)} /> Save as default</label>
-        <label className="mt-3 flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--foreground))' }}><input type="checkbox" checked={paperStock.showGuides} onChange={(e) => updatePaperStock('showGuides', e.target.checked)} /> Show removable alignment guides</label>
-        {paperStock.stockType === 'perforated' && <div className="mt-3 flex flex-wrap gap-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          {['1', '2', '3', '4'].map((number, index) => <span key={number} className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: PERFORATED_GUIDE_COLORS[index] }} />{number}</span>)}
-        </div>}
-        <p className="mt-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Default offsets are provisional until Social confirms the physical stock measurements.</p>
-        <details className="mt-3">
-          <summary className="cursor-pointer text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>Corner calibration (inches)</summary>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {([['topLeft', '1 Red / top left'], ['topRight', '2 Orange / top right'], ['bottomLeft', '3 Yellow / bottom left'], ['bottomRight', '4 Green / bottom right']] as const).map(([corner, label]) => <fieldset key={corner} className="rounded-md border p-2" style={{ borderColor: 'hsl(var(--border))' }}><legend className="px-1 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{label}</legend><div className="grid grid-cols-2 gap-2"><label className="text-xs">X<input type="number" step="0.001" value={(paperStock.cornerOffsets[corner].x / 300).toFixed(3)} onChange={(e) => updateCornerOffset(corner, 'x', Number(e.target.value) * 300 || 0)} className="mt-1 w-full rounded-md p-1" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label><label className="text-xs">Y<input type="number" step="0.001" value={(paperStock.cornerOffsets[corner].y / 300).toFixed(3)} onChange={(e) => updateCornerOffset(corner, 'y', Number(e.target.value) * 300 || 0)} className="mt-1 w-full rounded-md p-1" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label></div></fieldset>)}
-          </div>
-        </details>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="text-sm">Columns<input type="number" min="1" step="1" value={paperStock.columns} disabled={paperStock.stockType === 'standard'} onChange={(e) => updatePaperStock('columns', Number(e.target.value) || 1)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>
-          <label className="text-sm">Rows<input type="number" min="1" step="1" value={paperStock.rows} disabled={paperStock.stockType === 'standard'} onChange={(e) => updatePaperStock('rows', Number(e.target.value) || 1)} className="mt-1 w-full rounded-md p-2 disabled:opacity-50" style={{ backgroundColor: 'hsl(var(--input))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }} /></label>
-        </div>
-        <p className="mt-3 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>{paperStock.stockType === 'perforated' ? 'Stock grid' : 'Calculated layout'}: {layout.columns}×{layout.rows} ({layout.cardsPerSheet} cards per sheet)</p>
-      </CollapsibleSection>
-
       <CollapsibleSection title="Print Summary" defaultOpen={true} icon="📊">
         <div 
           className="rounded-lg p-4"
@@ -408,12 +350,12 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
               </span>
             </div>
             <div className="flex justify-between">
-              <span>{paperStock.pageSize === 'a4' ? 'A4' : 'Letter'} sheets needed:</span>
+              <span>A4 sheets needed:</span>
               <span 
                 className="font-medium"
                 style={{ color: 'hsl(var(--foreground))' }}
               >
-                {calculateSheets(cardCount, layout.cardsPerSheet)} sheets
+                {calculateSheets(cardCount, 8)} sheets
               </span>
             </div>
             <div className="flex justify-between">
@@ -422,16 +364,16 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
                 className="font-medium"
                 style={{ color: 'hsl(var(--foreground))' }}
               >
-                {layout.cardsPerSheet} ({layout.columns}×{layout.rows} layout)
+                8 (2×4 layout)
               </span>
             </div>
-            {cardCount % layout.cardsPerSheet !== 0 && (
+            {cardCount % 8 !== 0 && (
               <div 
                 className="flex justify-between"
                 style={{ color: 'hsl(var(--destructive))' }}
               >
                 <span>Last sheet:</span>
-                <span className="font-medium">{cardCount % layout.cardsPerSheet} cards</span>
+                <span className="font-medium">{cardCount % 8} cards</span>
               </div>
             )}
           </div>
@@ -463,10 +405,10 @@ const BatchSettings: React.FC<BatchSettingsProps> = ({
               fontFamily: 'var(--font-sans)'
             }}
           >
-            <li>• Use {paperStock.pageSize === 'a4' ? 'A4 paper (210×297mm)' : 'US Letter paper (8.5×11in)'}</li>
+            <li>• Use A4 paper (210×297mm)</li>
             <li>• Set printer to 100% scale</li>
             <li>• Enable duplex for front/back printing</li>
-            <li>• {paperStock.stockType === 'perforated' ? 'Tear along the pre-perforated lines' : 'Cut along the printed dotted lines'}</li>
+            <li>• Cut along dotted lines</li>
           </ul>
         </div>
       </CollapsibleSection>

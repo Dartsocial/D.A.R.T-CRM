@@ -153,41 +153,35 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
                             <div className="w-full h-full relative">
                               {displayBackSide ? (
                                 // Back side preview
-                                <div className="w-full h-full bg-white flex flex-col items-center justify-center relative">
-                                  {/* Dartboard watermark */}
+                                <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center relative overflow-hidden" style={{ border: '2px solid #111827', boxShadow: 'inset 0 0 0 2px rgba(127,29,29,0.8)' }}>
+                                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(135deg, rgba(15,23,42,0.05) 0%, rgba(15,23,42,0.05) 50%, transparent 50%, transparent 100%)', backgroundSize: '24px 24px' }} />
+
                                   <div className="absolute inset-0 flex items-center justify-center opacity-15">
                                     <img
                                       src="/images/home/dartboard.png"
                                       alt="Dartboard"
-                                      className="w-8 h-8 object-contain"
+                                      className="object-contain"
+                                      style={{ width: '85%', height: '85%', transform: 'rotate(-20deg)' }}
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         target.style.display = 'none';
                                       }}
                                     />
                                   </div>
-                                  
-                                  {/* Batch number */}
-                                  <div className="absolute bottom-1 right-1 text-xs font-bold text-gray-800">
-                                    {generateBatchNumber(cardNumber)}
-                                  </div>
-                                  
-                                  {/* Date */}
-                                  <div className="absolute bottom-1 left-1 text-xs text-gray-600">
-                                    {new Date().toLocaleDateString()}
-                                  </div>
-                                  
-                                  {/* Back indicator */}
-                                  <div className="text-xs text-gray-400 font-medium">
-                                    BACK
-                                  </div>
+
+                                  <div className="absolute top-1.5 left-1/2 -translate-x-1/2 text-[7px] font-bold tracking-widest text-red-800">COPY RESTRICTED</div>
+                                  <div className="absolute inset-x-0 top-5 flex justify-center items-center text-center px-2 text-[7px] font-bold text-gray-800">DARTS PROGRAM • AUTHORIZED PRINT ONLY</div>
+                                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[8px] font-black text-red-900" style={{ transform: 'translate(-50%, -50%) rotate(12deg)' }}>REPRODUCTION</div>
+                                  <div className="absolute bottom-1 left-1 text-[7px] font-bold text-gray-800">Batch {generateBatchNumber(cardNumber)}</div>
+                                  <div className="absolute bottom-1 right-1 text-[7px] font-bold text-gray-800">{new Date().toLocaleDateString()}</div>
+                                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[6px] uppercase tracking-[0.2em] text-gray-600">VOID • DUPLICATION PROHIBITED</div>
                                 </div>
                               ) : (
                                 // Front side preview
                                 <img
                                   src={templatePath}
                                   alt={`Card ${cardNumber}`}
-                                  className="w-full h-full object-contain bg-white"
+                                  className="w-full h-full object-cover"
                                   onError={(e) => {
                                     // Fallback for missing images
                                     const target = e.target as HTMLImageElement;
@@ -231,7 +225,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Click <strong>Front/Back Side</strong> buttons to view all cards at once</li>
           <li>• Click individual cards to flip them (🔄 icon appears)</li>
-          <li>• Back side shows dartboard watermark + batch number</li>
+          <li>• Back side includes anti-copy security watermark, stripes, and copy-control text</li>
           <li>• Front side shows template + card number</li>
         </ul>
       </div>
@@ -251,9 +245,9 @@ const CardPreview: React.FC<CardPreviewProps> = ({ templatePath, cardCount, batc
           <div>
             <div className="font-medium text-gray-700">Back Side</div>
             <ul className="text-gray-600 space-y-1">
-              <li>• Dartboard logo watermark (15% opacity)</li>
+              <li>• Anti-copy watermark + security border</li>
               <li>• Batch number ({batchId || 'XXXXXX'}-001)</li>
-              <li>• Print date stamp</li>
+              <li>• Printed date + copy restriction text</li>
             </ul>
           </div>
         </div>

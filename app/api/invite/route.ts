@@ -1,19 +1,21 @@
 // app/api/invite/route.ts
 import { NextResponse } from 'next/server';
-import { cookies, headers } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { requireAdmin } from '@/lib/auth/require-admin';
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const supabase = createRouteHandlerClient({ cookies, headers });
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: auth.status });
+  }
 
   // join roles on role_id to get the actual role name
-  const { data, error } = await supabase
+  const { data, error } = await auth.serviceClient
     .from('invites')
     .select(`
       code,
+      email,
       role_id,
       roles!role_id (
         role
@@ -37,6 +39,7 @@ export async function GET() {
 
   const invites = (data ?? []).map((i) => ({
     code:       i.code,
+    email:      i.email,
     role:       i.roles?.[0]?.role ?? i.role_id,      // decoded role name
     inviter: {
       name:   i.inviter_id,                           // still fallback to UUID

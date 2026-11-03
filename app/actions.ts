@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { encodedRedirect } from "@/utils/utils";
 import { cookies } from "next/headers";
-import { sendNotification } from "@/lib/notifications";
 
 const getAndClearLastPage = async (): Promise<string> => {
   const store = await cookies();
@@ -105,111 +104,8 @@ const populateUserCookies = async (userId: string, remember: boolean = false) =>
   }
 };
 
-export const signUpAction = async (formData: FormData) => {
-  const email = formData.get("email")?.toString();
-  const password = formData.get("password")?.toString();
-  const inviteCode = formData.get("invite")?.toString();
-  const supabase = await createClient();
-  const headerList = headers();
-  const origin = (await headerList).get("origin");
-
-  console.log("🔥 SIGNUP STARTED for:", email);
-
-  if (!email || !password) {
-    return encodedRedirect("error", "/sign-up", "Email and password are required.");
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback/oauth`,
-      data: inviteCode ? { invite: inviteCode } : {},
-    },
-  });
-
-  console.log("🔥 AUTH SIGNUP RESULT:", { data: !!data, error: error?.message });
-
-  if (error || !data.user) {
-    console.error("🔥 SIGNUP FAILED:", error?.message);
-    return encodedRedirect("error", "/sign-up", "Sign up failed.");
-  }
-  
-  console.log("🔥 USER CREATED:", data.user.id);
-
-  if (inviteCode) {
-    console.log("🔥 PROCESSING INVITE CODE:", inviteCode);
-    const { data: inviteData, error: inviteError } = await supabase
-      .from("invites")
-      .select("role_id")
-      .eq("code", inviteCode)
-      .maybeSingle();
-  
-    if (!inviteError && inviteData?.role_id) {
-      await supabase
-        .from("profiles")
-        .update({ 
-          role: inviteData.role_id,
-          avatar_url: "https://chsmesvozsjcgrwuimld.supabase.co/storage/v1/object/public/avatars/Default.png" 
-        })
-        .eq("id", data.user.id);
-  
-      await supabase
-        .from("invites")
-        .delete()
-        .eq("code", inviteCode);
-    }
-  } else {
-    console.log("🔥 NO INVITE CODE - SETTING DEFAULT ROLE");
-    const { data: roleData, error: roleError } = await supabase
-      .from("roles")
-      .select("id")
-      .eq("role", "user")
-      .maybeSingle();
-    
-    console.log("🔥 DEFAULT ROLE QUERY:", { roleData, roleError: roleError?.message });
-    
-    if (!roleError && roleData?.id) {
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ 
-          role: roleData.id,
-          avatar_url: "https://chsmesvozsjcgrwuimld.supabase.co/storage/v1/object/public/avatars/Default.png"
-        })
-        .eq("id", data.user.id);
-      
-      console.log("🔥 PROFILE UPDATE RESULT:", updateError?.message || "SUCCESS");
-    }
-  }
-  
-  const { data: profileData, error: profileError } = await supabase
-    .from("profiles")
-    .select("avatar_url")
-    .eq("id", data.user.id)
-    .single();
-
-  console.log("🔥 PROFILE FETCH:", { profileData, profileError: profileError?.message });
-
-  try {
-    console.log("🔥 SENDING NOTIFICATION...");
-    await sendNotification({
-      title: `${email} joined the team!`,
-      subtitle: "Tell them welcome!",
-      imageUrl: profileData?.avatar_url || "https://chsmesvozsjcgrwuimld.supabase.co/storage/v1/object/public/avatars/Default.png",
-      role_admin: true,
-    });
-    console.log("🔥 NOTIFICATION SENT SUCCESSFULLY!");
-  } catch (error) {
-    console.error("🔥 NOTIFICATION FAILED:", error);
-  }
-  
-  console.log("🔥 SIGNUP COMPLETE - REDIRECTING");
-  
-  return encodedRedirect(
-    "success",
-    "/sign-up",
-    "Thanks for signing up! Please check your email to verify your account."
-  );
+export const signUpAction = async (_formData: FormData) => {
+  return encodedRedirect("error", "/sign-up", "Accounts can only be created from an organization invitation.");
 };
 
 // 🍎 Enhanced signInAction with Remember Me support
@@ -279,6 +175,10 @@ export const resetPasswordAction = async (formData: FormData) => {
 
   if (!password || !confirmPassword) {
     return encodedRedirect("error", "/protected/reset-password", "Password and confirm password are required");
+  }
+
+  if (password.length < 12) {
+    return encodedRedirect("error", "/protected/reset-password", "Password must be at least 12 characters");
   }
 
   if (password !== confirmPassword) {

@@ -1,12 +1,11 @@
 // app/punchcards/PunchCardClient.tsx
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import TemplateSelector from './_components/TemplateSelector';
 import CardPreview from './_components/CardPreview';
 import PDFGenerator from './_components/PDFGenerator';
 import BatchSettings from './_components/BatchSettings';
-import { DEFAULT_PAPER_STOCK, getPaperLayout, type PaperStockSettings } from './_components/layout';
 
 interface PunchCard {
   front: string;
@@ -22,30 +21,6 @@ const PunchCardClient: React.FC = () => {
   const [generatedCards, setGeneratedCards] = useState<PunchCard[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [currentBatchId, setCurrentBatchId] = useState<string>('');
-  const [paperStock, setPaperStock] = useState<PaperStockSettings>(DEFAULT_PAPER_STOCK);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem('dart-punch-card-paper-stock');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const migrated = !parsed.columns || !parsed.rows
-          ? { ...parsed, orientation: 'landscape', topMargin: 0.507, leftMargin: 0.75, horizontalGap: 0, verticalGap: 0, columns: 2, rows: 5, version: 5 }
-          : parsed.version < 3 && parsed.stockType === 'perforated' && parsed.topMargin === 0.5
-            ? { ...parsed, topMargin: 0.25, version: 4 }
-            : parsed.version < 4 && parsed.stockType === 'perforated' && parsed.leftMargin === 0.75
-                ? { ...parsed, version: 5 }
-                    : parsed.version < 5 && parsed.stockType === 'perforated' && parsed.topMargin === 0.25
-                  ? { ...parsed, topMargin: 0.507, version: 5 }
-                    : parsed.version < 6 && parsed.stockType === 'perforated'
-                      ? { ...parsed, topMargin: 0.507, version: 6 }
-              : parsed;
-        setPaperStock({ ...DEFAULT_PAPER_STOCK, ...migrated, columns: migrated.columns || 2, rows: migrated.rows || 5, showGuides: migrated.showGuides ?? true, cornerOffsets: migrated.cornerOffsets || DEFAULT_PAPER_STOCK.cornerOffsets });
-      } catch { window.localStorage.removeItem('dart-punch-card-paper-stock'); }
-    }
-  }, []);
-
-  const layout = getPaperLayout(paperStock);
 
   const handleTemplateSelect = (templatePath: string) => {
     setSelectedTemplate(templatePath);
@@ -117,7 +92,7 @@ const PunchCardClient: React.FC = () => {
             fontFamily: 'var(--font-sans)'
           }}
         >
-          Use one of our templates or upload your own! Create professional punch cards with configurable paper-stock layouts for easy printing.
+          Use one of our templates or upload your own! Create professional punch cards with A4-optimized layouts for easy printing.
         </p>
       </div>
 
@@ -175,9 +150,6 @@ const PunchCardClient: React.FC = () => {
               onCardCountChange={setCardCount}
               batchName={batchName}
               onBatchNameChange={setBatchName}
-              paperStock={paperStock}
-              onPaperStockChange={setPaperStock}
-              layout={layout}
             />
           </div>
 
@@ -251,7 +223,6 @@ const PunchCardClient: React.FC = () => {
                 templatePath={selectedTemplate}
                 cardCount={cardCount}
                 batchId={currentBatchId}
-                layout={layout}
               />
             </div>
           )}
@@ -281,7 +252,6 @@ const PunchCardClient: React.FC = () => {
                 cards={generatedCards}
                 batchName={batchName}
                 batchId={currentBatchId}
-                layout={layout}
               />
             </div>
           )}

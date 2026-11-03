@@ -3,7 +3,6 @@
 
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
-import { getCardPosition, type PaperLayout } from './layout';
 
 interface PunchCard {
   front: string;
@@ -16,7 +15,6 @@ interface PDFGeneratorProps {
   cards: PunchCard[];
   batchName: string;
   batchId: string;
-  layout: PaperLayout;
 }
 
 interface GenerationProgress {
@@ -25,20 +23,34 @@ interface GenerationProgress {
   total: number;
 }
 
-const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, layout }) => {
+const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [generatedPDF, setGeneratedPDF] = useState<jsPDF | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  const { pageWidth, pageHeight, effectiveCardWidth: cardWidth, effectiveCardHeight: cardHeight, cardsPerSheet } = layout;
-  const bleed = layout.stockType === 'standard' ? Math.round(layout.bleed * 300) : 0;
+  // A4 dimensions at 300 DPI
+  const A4_WIDTH = 2480;
+  const A4_HEIGHT = 3508;
+  
+  // Card dimensions (scaled for A4)
+  const CARD_WIDTH = 1088;
+  const CARD_HEIGHT = 638;
+  
+  // Layout settings
+  const CARDS_PER_SHEET = 8;
+  const COLS = 2;
+  const ROWS = 4;
+  
+  // Calculate spacing for A4 layout
+  const MARGIN_X = (A4_WIDTH - (COLS * CARD_WIDTH)) / (COLS + 1);
+  const MARGIN_Y = (A4_HEIGHT - (ROWS * CARD_HEIGHT)) / (ROWS + 1);
 
   const generateIndividualCard = async (card: PunchCard, isBackSide: boolean = false): Promise<string> => {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
-      canvas.width = cardWidth + (bleed * 2);
-      canvas.height = cardHeight + (bleed * 2);
+      canvas.width = CARD_WIDTH;
+      canvas.height = CARD_HEIGHT;
       const ctx = canvas.getContext('2d');
       
       if (!ctx) {
@@ -48,50 +60,117 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
 
       // White background
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.translate(bleed, bleed);
+      ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 
       if (isBackSide) {
-        // Generate back side with dartboard logo watermark
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
-        
+
         logoImg.onload = () => {
-          // Draw dartboard logo as watermark (centered, low opacity)
-          ctx.globalAlpha = 0.15;
-          const logoSize = Math.min(cardWidth, cardHeight) * 0.6;
-          const logoX = (cardWidth - logoSize) / 2;
-          const logoY = (cardHeight - logoSize) / 2;
-          ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
-          
-          // Reset opacity for text
-          ctx.globalAlpha = 1.0;
-          
-          // Add batch number (bottom-right)
-          ctx.fillStyle = '#333333';
-          ctx.font = 'bold 36px Arial';
-          ctx.textAlign = 'right';
-          ctx.fillText(card.batchNumber, cardWidth - 40, cardHeight - 40);
-          
-          // Add date (bottom-left)
+          const panelPadding = 18;
+          const borderColor = '#111827';
+          const accentColor = '#7f1d1d';
+
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 7;
+          ctx.strokeRect(panelPadding, panelPadding, CARD_WIDTH - panelPadding * 2, CARD_HEIGHT - panelPadding * 2);
+
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(panelPadding + 18, panelPadding + 18, CARD_WIDTH - (panelPadding + 18) * 2, CARD_HEIGHT - (panelPadding + 18) * 2);
+
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.08)';
+          ctx.lineWidth = 1;
+          for (let i = 0; i < 18; i++) {
+            const x = 24 + i * 54;
+            ctx.beginPath();
+            ctx.moveTo(x, 20);
+            ctx.lineTo(x - 24, CARD_HEIGHT - 20);
+            ctx.stroke();
+          }
+
+          ctx.save();
+          ctx.translate(CARD_WIDTH / 2, CARD_HEIGHT / 2);
+          ctx.rotate(-Math.PI / 7);
+          ctx.globalAlpha = 0.12;
+          const logoSize = Math.min(CARD_WIDTH, CARD_HEIGHT) * 0.66;
+          ctx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
+          ctx.restore();
+
+          ctx.fillStyle = accentColor;
+          ctx.textAlign = 'center';
+          ctx.font = '700 26px Arial';
+          ctx.fillText('COPY RESTRICTED', CARD_WIDTH / 2, 72);
+
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 20px Arial';
+          ctx.fillText('DARTS PROGRAM • AUTHORIZED PRINT ONLY', CARD_WIDTH / 2, CARD_HEIGHT / 2 - 16);
+
+          ctx.save();
+          ctx.translate(CARD_WIDTH / 2, CARD_HEIGHT / 2 + 36);
+          ctx.rotate(Math.PI / 10);
+          ctx.fillStyle = 'rgba(127, 29, 29, 0.78)';
+          ctx.font = '900 38px Arial';
+          ctx.fillText('REPRODUCTION', 0, 0);
+          ctx.restore();
+
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 18px Arial';
+          ctx.fillText('VOID • UNAUTHORIZED DUPLICATION PROHIBITED', CARD_WIDTH / 2, CARD_HEIGHT - 82);
+
           ctx.textAlign = 'left';
-          ctx.font = '24px Arial';
-          ctx.fillText(new Date().toLocaleDateString(), 40, cardHeight - 40);
-          
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 21px Arial';
+          ctx.fillText('Batch', 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(card.batchNumber, 40, CARD_HEIGHT - 24);
+
+          ctx.textAlign = 'right';
+          ctx.font = '700 21px Arial';
+          ctx.fillText('Printed', CARD_WIDTH - 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(new Date().toLocaleDateString(), CARD_WIDTH - 40, CARD_HEIGHT - 24);
+
           resolve(canvas.toDataURL('image/png'));
         };
 
         logoImg.onerror = () => {
-          // Fallback without logo
-          ctx.fillStyle = '#333333';
-          ctx.font = 'bold 36px Arial';
-          ctx.textAlign = 'right';
-          ctx.fillText(card.batchNumber, cardWidth - 40, cardHeight - 40);
-          
+          const panelPadding = 18;
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+          ctx.strokeStyle = '#111827';
+          ctx.lineWidth = 7;
+          ctx.strokeRect(panelPadding, panelPadding, CARD_WIDTH - panelPadding * 2, CARD_HEIGHT - panelPadding * 2);
+
+          ctx.fillStyle = '#7f1d1d';
+          ctx.textAlign = 'center';
+          ctx.font = '700 26px Arial';
+          ctx.fillText('COPY RESTRICTED', CARD_WIDTH / 2, 72);
+
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 20px Arial';
+          ctx.fillText('DARTS PROGRAM • AUTHORIZED PRINT ONLY', CARD_WIDTH / 2, CARD_HEIGHT / 2 - 16);
+
+          ctx.fillStyle = 'rgba(127, 29, 29, 0.8)';
+          ctx.font = '900 38px Arial';
+          ctx.fillText('REPRODUCTION', CARD_WIDTH / 2, CARD_HEIGHT / 2 + 32);
+
           ctx.textAlign = 'left';
-          ctx.font = '24px Arial';
-          ctx.fillText(new Date().toLocaleDateString(), 40, cardHeight - 40);
-          
+          ctx.font = '700 21px Arial';
+          ctx.fillStyle = '#111827';
+          ctx.fillText('Batch', 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(card.batchNumber, 40, CARD_HEIGHT - 24);
+
+          ctx.textAlign = 'right';
+          ctx.font = '700 21px Arial';
+          ctx.fillText('Printed', CARD_WIDTH - 40, CARD_HEIGHT - 58);
+          ctx.font = '700 28px Arial';
+          ctx.fillText(new Date().toLocaleDateString(), CARD_WIDTH - 40, CARD_HEIGHT - 24);
+
           resolve(canvas.toDataURL('image/png'));
         };
 
@@ -102,31 +181,20 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         templateImg.crossOrigin = 'anonymous';
         
         templateImg.onload = () => {
-          const scale = Math.min(cardWidth / templateImg.width, cardHeight / templateImg.height);
-          const fittedWidth = templateImg.width * scale;
-          const fittedHeight = templateImg.height * scale;
-          const fittedX = (cardWidth - fittedWidth) / 2;
-          const fittedY = (cardHeight - fittedHeight) / 2;
-          ctx.drawImage(templateImg, fittedX, fittedY, fittedWidth, fittedHeight);
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-          ctx.font = 'bold 24px Arial';
-          ctx.textAlign = 'right';
-          ctx.fillText(card.batchNumber, cardWidth - 24, cardHeight - 24);
+          // Draw template image only - no card number
+          ctx.drawImage(templateImg, 0, 0, CARD_WIDTH, CARD_HEIGHT);
           
           resolve(canvas.toDataURL('image/png'));
         };
 
         templateImg.onerror = () => {
+          // Fallback template - no card number
           ctx.fillStyle = '#f0f0f0';
-          ctx.fillRect(0, 0, cardWidth, cardHeight);
+          ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
           ctx.fillStyle = '#666666';
           ctx.font = '48px Arial';
           ctx.textAlign = 'center';
-          ctx.fillText('Template', cardWidth / 2, cardHeight / 2);
-          ctx.font = 'bold 24px Arial';
-          ctx.textAlign = 'right';
-          ctx.fillStyle = '#333333';
-          ctx.fillText(card.batchNumber, cardWidth - 24, cardHeight - 24);
+          ctx.fillText('Template', CARD_WIDTH/2, CARD_HEIGHT/2);
           
           resolve(canvas.toDataURL('image/png'));
         };
@@ -139,8 +207,8 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
   const generateCardSheet = async (cardBatch: PunchCard[], isBackSide: boolean = false): Promise<string> => {
     return new Promise(async (resolve, reject) => {
       const canvas = document.createElement('canvas');
-      canvas.width = pageWidth;
-      canvas.height = pageHeight;
+      canvas.width = A4_WIDTH;
+      canvas.height = A4_HEIGHT;
       const ctx = canvas.getContext('2d');
       
       if (!ctx) {
@@ -150,7 +218,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
 
       // White background
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, pageWidth, pageHeight);
+      ctx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
 
       try {
         // Generate individual cards first
@@ -182,30 +250,40 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
             return;
           }
 
-            const { x, y, row, col } = getCardPosition(layout, index, isBackSide);
+          const row = Math.floor(index / COLS);
+          const col = index % COLS;
+          
+          // Calculate position (mirror for back side)
+          const x = isBackSide 
+            ? A4_WIDTH - MARGIN_X - ((col + 1) * CARD_WIDTH) - (col * MARGIN_X)
+            : MARGIN_X + (col * (CARD_WIDTH + MARGIN_X));
+          const y = MARGIN_Y + (row * (CARD_HEIGHT + MARGIN_Y));
 
           const img = new Image();
           img.onload = () => {
-            ctx.drawImage(img, x - bleed, y - bleed, cardWidth + (bleed * 2), cardHeight + (bleed * 2));
+            ctx.drawImage(img, x, y, CARD_WIDTH, CARD_HEIGHT);
             
-            if (layout.showGuides) {
-              ctx.strokeStyle = '#cccccc';
-              ctx.setLineDash([5, 5]);
-              ctx.lineWidth = 2;
-              if (layout.stockType === 'standard' && col < layout.columns - 1) {
-                const cutX = x + cardWidth + (layout.horizontalGap * 300 / 2);
-                ctx.beginPath();
-                ctx.moveTo(cutX, y - 20);
-                ctx.lineTo(cutX, y + cardHeight + 20);
-                ctx.stroke();
-              }
-              if (layout.stockType === 'standard' && row < layout.rows - 1) {
-                const cutY = y + cardHeight + (layout.verticalGap * 300 / 2);
-                ctx.beginPath();
-                ctx.moveTo(x - 20, cutY);
-                ctx.lineTo(x + cardWidth + 20, cutY);
-                ctx.stroke();
-              }
+            // Draw cut lines
+            ctx.strokeStyle = '#cccccc';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+            
+            // Vertical cut lines
+            if (col < COLS - 1) {
+              const cutX = x + CARD_WIDTH + (MARGIN_X / 2);
+              ctx.beginPath();
+              ctx.moveTo(cutX, y - 20);
+              ctx.lineTo(cutX, y + CARD_HEIGHT + 20);
+              ctx.stroke();
+            }
+            
+            // Horizontal cut lines
+            if (row < ROWS - 1) {
+              const cutY = y + CARD_HEIGHT + (MARGIN_Y / 2);
+              ctx.beginPath();
+              ctx.moveTo(x - 20, cutY);
+              ctx.lineTo(x + CARD_WIDTH + 20, cutY);
+              ctx.stroke();
             }
             
             loadedCards++;
@@ -217,8 +295,8 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
               ctx.textAlign = 'right';
               ctx.fillText(
                 `${isBackSide ? 'Back' : 'Front'} - ${batchName || 'Punch Cards'}`,
-                pageWidth - 40,
-                pageHeight - 40
+                A4_WIDTH - 40,
+                A4_HEIGHT - 40
               );
               
               resolve(canvas.toDataURL('image/png'));
@@ -241,19 +319,19 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
 
       const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'pt',
-        format: [layout.pageWidthPoints, layout.pageHeightPoints]
+        unit: 'px',
+        format: [A4_WIDTH, A4_HEIGHT]
       });
 
-      const sheetsNeeded = Math.ceil(cards.length / cardsPerSheet);
+      const sheetsNeeded = Math.ceil(cards.length / CARDS_PER_SHEET);
       let pageAdded = false;
 
       for (let sheetIndex = 0; sheetIndex < sheetsNeeded; sheetIndex++) {
-        const startCard = sheetIndex * cardsPerSheet;
-        const endCard = Math.min(startCard + cardsPerSheet, cards.length);
+        const startCard = sheetIndex * CARDS_PER_SHEET;
+        const endCard = Math.min(startCard + CARDS_PER_SHEET, cards.length);
         
         // Get cards for this sheet (pad with null if needed)
-        const sheetCards = Array.from({ length: cardsPerSheet }, (_, i) => {
+        const sheetCards = Array.from({ length: CARDS_PER_SHEET }, (_, i) => {
           const cardIndex = startCard + i;
           return cardIndex < cards.length ? cards[cardIndex] : null;
         });
@@ -268,7 +346,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         const frontSide = await generateCardSheet(sheetCards, false);
         
         if (pageAdded) pdf.addPage();
-        pdf.addImage(frontSide, 'PNG', 0, 0, layout.pageWidthPoints, layout.pageHeightPoints);
+        pdf.addImage(frontSide, 'PNG', 0, 0, A4_WIDTH, A4_HEIGHT);
         pageAdded = true;
 
         setProgress({
@@ -281,7 +359,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
         const backSide = await generateCardSheet(sheetCards, true);
         
         pdf.addPage();
-        pdf.addImage(backSide, 'PNG', 0, 0, layout.pageWidthPoints, layout.pageHeightPoints);
+        pdf.addImage(backSide, 'PNG', 0, 0, A4_WIDTH, A4_HEIGHT);
       }
 
       setProgress({
@@ -425,9 +503,9 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
               className="space-y-1"
               style={{ color: isReady ? 'hsl(var(--accent-foreground))' : 'hsl(var(--muted-foreground))' }}
             >
-              <li>• {layout.pageSize === 'a4' ? 'A4' : 'Letter'} sheets</li>
+              <li>• A4 optimized sheets</li>
               <li>• Duplex print ready</li>
-              <li>• {layout.stockType === 'standard' ? 'Bleed and cut guides included' : 'Pre-perforated alignment; no cut guides'}</li>
+              <li>• Cut guides included</li>
               <li>• {isReady ? 'Ready to download' : 'Manual download'}</li>
             </ul>
           </div>
@@ -591,7 +669,7 @@ const PDFGenerator: React.FC<PDFGeneratorProps> = ({ cards, batchName, batchId, 
             fontFamily: 'var(--font-sans)'
           }}
         >
-          <li>Load {layout.pageSize === 'a4' ? 'A4' : 'US Letter'} paper in your printer</li>
+          <li>Load A4 paper in your printer</li>
           <li>Print at 100% scale (no scaling)</li>
           <li>Use duplex printing for front/back alignment</li>
           <li>Pages alternate: Front1, Back1, Front2, Back2...</li>

@@ -1,20 +1,20 @@
 // app/api/invite/[code]/route.ts
 import { NextResponse } from 'next/server';
-import { cookies, headers } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-
-export const runtime = 'edge';
-export const dynamic = 'force-dynamic';
+import { requireAdmin } from '@/lib/auth/require-admin';
 
 export async function DELETE(
   req: Request,
   { params }: { params: { code: string } }
 ) {
+  const auth = await requireAdmin();
+  if (!auth.authorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: auth.status });
+  }
+
   const { code } = params;
-  const supabase = createRouteHandlerClient({ cookies, headers });
 
   // Attempt to delete the invite row
-  const { error } = await supabase
+  const { error } = await auth.serviceClient
     .from('invites')
     .delete()
     .eq('code', code);
