@@ -11,6 +11,22 @@ import { PreviewPanel } from "./dart-bucks/components/PreviewPanel";
 import { PrintAuthModal } from "./dart-bucks/components/PrintAuthModal";
 import { BatchAuditLedger } from "./dart-bucks/components/BatchAuditLedger";
 
+const MAX_STORED_PDF_BYTES = 1_000_000;
+
+const readBlobAsDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("The generated PDF could not be cached for the batch ledger."));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read the generated PDF."));
+    reader.readAsDataURL(blob);
+  });
+
 export default function DartBucksGenerator() {
   const [config, setConfig] = useState<DartBuckConfig>({
     mode: "drawer",
@@ -342,16 +358,16 @@ export default function DartBucksGenerator() {
       if (config.mode === "drawer") {
         const auditCanvas = document.createElement("canvas");
         drawDrawerAuditSlip(auditCanvas, config.drawerAmount, config.drawerBreakdown, config.batchId, config.stationPrefix);
-        const auditImg = auditCanvas.toDataURL("image/png");
-        doc.addImage(auditImg, "PNG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
+        const auditImg = auditCanvas.toDataURL("image/jpeg", 0.9);
+        doc.addImage(auditImg, "JPEG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
 
         // PAGE 2: AUDIT SLIP VERSO BACK PAGE (Guarantees duplex page alignment pairing)
         if (config.includeDuplexBacks) {
           doc.addPage();
           const auditBackCanvas = document.createElement("canvas");
           drawDrawerAuditSlipBack(auditBackCanvas, config.batchId);
-          const auditBackImg = auditBackCanvas.toDataURL("image/png");
-          doc.addImage(auditBackImg, "PNG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
+          const auditBackImg = auditBackCanvas.toDataURL("image/jpeg", 0.9);
+          doc.addImage(auditBackImg, "JPEG", 0, 0, paperSpec.widthMm, paperSpec.heightMm);
         }
       }
 
@@ -376,7 +392,7 @@ export default function DartBucksGenerator() {
 
           const item = billQueue[queueIndex];
           renderDartBuckOnCanvasDirect(frontCanvas, item.serial, config, item.denom, 1200, 600);
-          const imgData = frontCanvas.toDataURL("image/png");
+          const imgData = frontCanvas.toDataURL("image/jpeg", 0.9);
 
           const col = i % cols;
           const row = Math.floor(i / cols);
@@ -384,7 +400,7 @@ export default function DartBucksGenerator() {
           const x = marginX + col * (cardWidthMm + gapX);
           const y = marginY + row * (cardHeightMm + gapY);
 
-          doc.addImage(imgData, "PNG", x, y, cardWidthMm, cardHeightMm);
+          doc.addImage(imgData, "JPEG", x, y, cardWidthMm, cardHeightMm);
 
           if (config.includeCropMarks) {
             drawPdfCropMarks(doc, x, y, cardWidthMm, cardHeightMm, config.bleedMm, 4);
@@ -400,7 +416,7 @@ export default function DartBucksGenerator() {
 
             const item = billQueue[queueIndex];
             renderDartBuckBackOnCanvas(backCanvas, item.serial, config, watermarkLightImg, watermarkDarkImg, item.denom, 1200, 600);
-            const imgDataBack = backCanvas.toDataURL("image/png");
+            const imgDataBack = backCanvas.toDataURL("image/jpeg", 0.9);
 
             const col = i % cols;
             const row = Math.floor(i / cols);
@@ -410,7 +426,7 @@ export default function DartBucksGenerator() {
             const x = marginX + mirroredCol * (cardWidthMm + gapX);
             const y = marginY + row * (cardHeightMm + gapY);
 
-            doc.addImage(imgDataBack, "PNG", x, y, cardWidthMm, cardHeightMm);
+            doc.addImage(imgDataBack, "JPEG", x, y, cardWidthMm, cardHeightMm);
 
             if (config.includeCropMarks) {
               drawPdfCropMarks(doc, x, y, cardWidthMm, cardHeightMm, config.bleedMm, 4);
@@ -419,11 +435,26 @@ export default function DartBucksGenerator() {
         }
       }
 
-      let pdfDataUrl: string | undefined = undefined;
-      try {
-        pdfDataUrl = doc.output("datauristring");
-      } catch (e) {
-        console.warn("Could not generate pdfDataUrl string:", e);
+      const filename = config.mode === "drawer"
+        ? `DartBucks_Drawer_Allotment_$${config.drawerAmount}_${config.batchId}.pdf`
+        : `DartBucks_${config.denomination}s_Batch_${config.batchId}.pdf`;
+      const pdfBlob = doc.output("blob");
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = downloadUrl;
+      downloadLink.download = filename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+
+      let pdfDataUrl: string | undefined;
+      if (pdfBlob.size <= MAX_STORED_PDF_BYTES) {
+        try {
+          pdfDataUrl = await readBlobAsDataUrl(pdfBlob);
+        } catch (err) {
+          console.warn("Could not cache the generated PDF in the batch ledger:", err);
+        }
       }
 
       const logItem: BatchLogItem = {
@@ -451,12 +482,6 @@ export default function DartBucksGenerator() {
       };
 
       await saveBatchLog(logItem);
-
-      const filename = config.mode === "drawer"
-        ? `DartBucks_Drawer_Allotment_$${config.drawerAmount}_${config.batchId}.pdf`
-        : `DartBucks_${config.denomination}s_Batch_${config.batchId}.pdf`;
-
-      doc.save(filename);
     } catch (err) {
       console.error("PDF export error:", err);
       alert("Failed to export PDF: " + (err instanceof Error ? err.message : String(err)));

@@ -124,7 +124,7 @@ export const BatchAuditLedger: React.FC<BatchAuditLedgerProps> = ({
             Department Allotment & Shred Destruction Audit Ledger
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Track department allocations, register turn-ins, download stored PDF documents, and record unused bills sent to the DART Shredding Department.
+            Track department allocations and register turn-ins, re-download compact stored PDFs when available, and record unused bills sent to the DART Shredding Department.
           </p>
         </div>
 
