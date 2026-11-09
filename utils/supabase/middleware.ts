@@ -33,18 +33,24 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const protectedPrefixes = ["/protected", "/settings", "/api/messages"];
-  const isProtected = protectedPrefixes.some(
-    (prefix) =>
-      req.nextUrl.pathname === prefix ||
-      req.nextUrl.pathname.startsWith(`${prefix}/`)
-  );
+  const protectedPrefixes = ["/protected", "/settings", "/api/messages", "/people"];
+  const isPeopleSignIn = req.nextUrl.pathname === "/people/sign-in";
+  const isProtected =
+    !isPeopleSignIn &&
+    protectedPrefixes.some(
+      (prefix) =>
+        req.nextUrl.pathname === prefix ||
+        req.nextUrl.pathname.startsWith(`${prefix}/`)
+    );
 
   if (isProtected && !session) {
     const target =
       req.nextUrl.pathname + (req.nextUrl.search || "");
+    const signInPath = req.nextUrl.pathname.startsWith("/people")
+      ? "/people/sign-in"
+      : "/sign-in";
     return NextResponse.redirect(
-      new URL(`/sign-in?redirect_to=${encodeURIComponent(target)}`, req.url)
+      new URL(`${signInPath}?redirect_to=${encodeURIComponent(target)}`, req.url)
     );
   }
 
