@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import PeopleAdmin from "@/components/people/PeopleAdmin";
 
 export const metadata = {
-  title: "People & Shirt Sizes",
+  title: "Shirt Day",
   robots: { index: false, follow: false },
 };
 

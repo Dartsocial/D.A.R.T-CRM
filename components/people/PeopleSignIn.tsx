@@ -80,7 +80,7 @@ export default function PeopleSignIn() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#10264b] text-lg font-bold text-[#e2b43b]">
             D
           </div>
-          <h1 className="text-2xl font-bold text-[#10264b]">People & Shirt Sizes</h1>
+          <h1 className="text-2xl font-bold text-[#10264b]">Shirt Day</h1>
           <p className="mt-2 text-sm text-slate-600">
             Sign in with your @dartontarget.org account.
           </p>
