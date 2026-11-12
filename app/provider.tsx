@@ -88,6 +88,8 @@ function InternalAuthProvider({ children }: { children: React.ReactNode }) {
 
       const isPublicRoute =
         publicRoutes.includes(pathname) ||
+        pathname === "/people" ||
+        pathname.startsWith("/people/") ||
         pathname.startsWith("/CMS") ||
         pathname.startsWith("/Tools");
 
